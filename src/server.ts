@@ -5,6 +5,9 @@ import logging from "./config/logging";
 import config from "./config/config";
 import utilRoutes from "./routes/utilRoutes";
 import registerUser from "./routes/databaseRoutes";
+import { v4 as uuidv4 } from "uuid";
+ 
+import getUserIdFromEmail from "./utils";
 
 
 const cors = require("cors");
@@ -104,34 +107,48 @@ app.post("/create-model", async (req, res) => {
   logging.info("Model post", "Model creation post request called.");
 
   const modelPlaceholder = {
-    "modelId": "k9723gda09",
-    "name": "top_3_european",
-    "accuracy": 87.03,
+    "userEmail": "teddypeifer@gmail.com",
+    "modelId": uuidv4().split("-").slice(-1)[0],
+    "name": "top_15_european_and_else",
+    "accuracy": 0.0,
     "description": "-",
-    "nationalities": '{"german", "new zealander", "greek"}',
-    "scores": '{90.72, 81.93, 95.04}'
+    "nationalities": '{"german", "new zealander", "greek", "else"}',
+    "scores": '{}', // 90.72, 81.93, 95.04
+    "mode": 0
   }
 
   try {
     const { rawModelData } = req.body;
     const modelData = modelPlaceholder;
 
-    const checkNameHeader = await pool.query(
-      `SELECT EXISTS(SELECT 1 from "model" where name='${modelData.name}')`
-    );
+    // get user id from email
+    const userId = await getUserIdFromEmail(modelData.userEmail);
+    if (userId === -1) {
+      logging.error("Model post", "User email does not exists.");
 
-    const checkIdHeader = await pool.query(
-      `SELECT EXISTS(SELECT 1 from "model" where model_id='${modelData.modelId}')`
+      return res.status(405).json({
+        error: "emailDoesNotExist",
+      });
+    }
+    
+    // check if user has already a model with the wanted name
+    var modelNameDuplicates = await pool.query(
+      `SELECT user_id from "user_to_model" WHERE model_id IN ( SELECT model_id FROM "model" WHERE name='${modelData.name}' ) AND user_id='${userId}'`
     );
-
-    if (checkIdHeader.rows[0].exists) {
+    
+    // check if the model id already exists
+    const checkIdDuplicates = await pool.query(
+      `SELECT EXISTS(SELECT 1 from "model" WHERE model_id='${modelData.modelId}')`
+    );
+    
+    if (checkIdDuplicates.rows[0].exists) {
       logging.error("Model post", "Model id already exists.");
 
       return res.status(405).json({
         error: "modelIdDuplicateExists",
       });
     }
-    else if (checkNameHeader.rows[0].exists) {
+    else if (modelNameDuplicates.rows.length > 0) {
       logging.error("Model post", "Model name already exists.");
 
       return res.status(405).json({
@@ -140,11 +157,20 @@ app.post("/create-model", async (req, res) => {
     }
     
     else {
+      // create model entry
       const newModel = await pool.query(
-        `INSERT INTO "model" (model_id, name, accuracy, description, nationalities, scores) 
-        VALUES ('${modelData.modelId}', '${modelData.name}', '${modelData.accuracy}', '${modelData.description}', '${modelData.nationalities}', '${modelData.scores}')`
+        `INSERT INTO "model" (model_id, name, accuracy, description, nationalities, scores, mode) 
+        VALUES ('${modelData.modelId}', '${modelData.name}', '${modelData.accuracy}', '${modelData.description}', 
+                '${modelData.nationalities}', '${modelData.scores}', '${modelData.mode}')`
       );
       res.json(newModel);
+
+      // create user-to-model entry
+      const newUserModelRelation = await pool.query(
+        `INSERT INTO "user_to_model" (user_id, model_id) 
+        VALUES ('${userId}', '${modelData.modelId}')`
+      );
+      res.json(newUserModelRelation);
     }
 
 
