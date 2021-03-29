@@ -1,5 +1,6 @@
 const pool = require("./db");
 
+
 async function getUserIdFromEmail(email: string) {
     var userId = await pool.query(
         `SELECT id from "user" WHERE email='${email}'`

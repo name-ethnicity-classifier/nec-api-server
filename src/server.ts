@@ -6,7 +6,6 @@ import config from "./config/config";
 import utilRoutes from "./routes/utilRoutes";
 import registerUser from "./routes/databaseRoutes";
 import { v4 as uuidv4 } from "uuid";
- 
 import getUserIdFromEmail from "./utils";
 
 
@@ -17,6 +16,10 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+
+const userRoutes = require("./routes/userRoutes");
+const modelRoutes = require("./routes/modelRoutes");
+
 
 /* logging */
 app.use((req, res, next) => {
@@ -59,9 +62,12 @@ app.use((req, res, next) => {
 
 // add utility routes
 app.use("/", utilRoutes);
+app.use("/", userRoutes);
+app.use("/", modelRoutes)
+
 
 // register user
-app.post("/register", async (req, res) => {
+/*app.post("/register", async (req, res) => {
   logging.info("User post", "User registry post request called.");
 
   const userPlaceholder = {
@@ -73,12 +79,12 @@ app.post("/register", async (req, res) => {
   try {
     const { rawUserData } = req.body;
     const userData = userPlaceholder;
-    console.log(userData)
-    const checkEmailHeader = await pool.query(
+
+    const checkEmailDuplicates = await pool.query(
       `SELECT EXISTS(SELECT 1 from "user" where email='${userData.email}')`
     );
 
-    if (checkEmailHeader.rows[0].exists) {
+    if (checkEmailDuplicates.rows[0].exists) {
       logging.error("User post", "User email already exists.");
 
       return res.status(405).json({
@@ -86,13 +92,11 @@ app.post("/register", async (req, res) => {
       });
     }
     
-    if (!checkEmailHeader.rows[0].exists) {
+    else {
       const newUser = await pool.query(
         `INSERT INTO "user" (email, password, signup_time) VALUES ('${userData.email}', '${userData.password}', '${userData.signupTime}')`
       );
       res.json(newUser);
-    }
-    else {
     }
 
   }
@@ -132,7 +136,7 @@ app.post("/create-model", async (req, res) => {
     }
     
     // check if user has already a model with the wanted name
-    var modelNameDuplicates = await pool.query(
+    const modelNameDuplicates = await pool.query(
       `SELECT user_id from "user_to_model" WHERE model_id IN ( SELECT model_id FROM "model" WHERE name='${modelData.name}' ) AND user_id='${userId}'`
     );
     
@@ -178,7 +182,7 @@ app.post("/create-model", async (req, res) => {
   catch (err) {
     logging.error("Model post", err.message);
   }
-});
+});*/
 
 
 
