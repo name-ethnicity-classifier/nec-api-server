@@ -2,6 +2,7 @@ import express from "express";
 import logging from "../config/logging";
 import config from "../config/config";
 import { v4 as uuidv4 } from "uuid";
+import { Request, Response, NextFunction } from "express";
 
 require("dotenv").config();
 
@@ -20,12 +21,12 @@ function validateEmail(email: string) {
 
 
 // register user
-router.post("/registration", async (req, res) => {
+router.post("/register", async (req: Request, res: Response) => {
     logging.info("Sign up post", "User registration request called.");
   
     const userPlaceholder = {
-        "email": "testmail@this.com",
-        "password": "meinPwd123",
+        "email": "myAcc@mail.com",
+        "password": "thisIsIt123",
         "signupTime": "01/10/2071"
     }
   
@@ -88,12 +89,12 @@ router.post("/registration", async (req, res) => {
 
 
 // login user
-router.post("/login", async (req, res) => {
+router.post("/login", async (req: Request, res: Response) => {
     logging.info("Log in post", "User login request called.");
   
     const userPlaceholder = {
-        "email": "testmail@this.com",
-        "password": "meinPwd123",
+        "email": "myAcc@mail.com",
+        "password": "thisIsIt123",
     }
   
     try {

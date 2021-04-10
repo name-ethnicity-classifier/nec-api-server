@@ -3,9 +3,11 @@ import logging from "../config/logging";
 import config from "../config/config";
 import utilRoutes from "../routes/utilRoutes";
 import { v4 as uuidv4 } from "uuid";
- 
+import { Request, Response, NextFunction } from "express";
+
 const cors = require("cors");
 const pool = require("../db");
+const checkAuthentication = require("../middleware/checkAuthentication");
 
 const router = express.Router();
 
@@ -26,13 +28,13 @@ async function getUserIdFromEmail(email: string) {
 
 
 // create model   
-router.post("/create-model", async (req, res) => {
+router.post("/create-model", checkAuthentication, async (req: Request, res: Response) => {
     logging.info("Model post", "Model creation post request called.");
   
     const modelPlaceholder = {
-        "userEmail": "teddypeifer@gmail.com",
+        "userEmail": "myAcc@mail.com",
         "modelId": uuidv4().split("-").slice(-1)[0],
-        "name": "top_16_european_and_else",
+        "name": "my-thrd-dataset",
         "accuracy": 0.0,
         "description": "-",
         "nationalities": '{"german", "new zealander", "greek", "else"}',
@@ -41,9 +43,9 @@ router.post("/create-model", async (req, res) => {
     }
   
     try {
-        const { rawModelData } = req.body;
-        const modelData = modelPlaceholder;
-        console.log("1")
+        const modelData = req.body;//modelPlaceholder;
+        //const modelData = modelPlaceholder;
+
         // get user id from email
         const userId = await getUserIdFromEmail(modelData.userEmail);
         if (userId === -1) {
@@ -70,6 +72,7 @@ router.post("/create-model", async (req, res) => {
         const modelNameDuplicates = await pool.query(
             `SELECT user_id from "user_to_model" WHERE model_id IN ( SELECT model_id FROM "model" WHERE name='${modelData.name}' ) AND user_id='${userId}'`
         );
+
         if (modelNameDuplicates.rows.length > 0) {
             logging.error("Model post", "Model name already exists.");
     

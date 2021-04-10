@@ -7,6 +7,7 @@ import utilRoutes from "./routes/utilRoutes";
 import registerUser from "./routes/databaseRoutes";
 import { v4 as uuidv4 } from "uuid";
 import getUserIdFromEmail from "./utils";
+import { Request, Response, NextFunction } from "express";
 
 
 const cors = require("cors");
@@ -16,13 +17,15 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded());
+
 
 const userRoutes = require("./routes/userRoutes");
 const modelRoutes = require("./routes/modelRoutes");
 
 
 /* logging */
-app.use((req, res, next) => {
+app.use((req: Request, res: Response, next: NextFunction) => {
   logging.info(
     "Server",
     `METHOD - [${req.method}], URL - [${req.url}], IP - [${req.socket.remoteAddress}]`
@@ -38,11 +41,10 @@ app.use((req, res, next) => {
   next();
 });
 
-//app.use(bodyParser.urlencoded({ extended: false }));
-//app.use(bodyParser.json());
+
 
 /* API rules */
-app.use((req, res, next) => {
+app.use((req: Request, res: Response, next: NextFunction) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.header(
     // "Access-Control-Allow-Origin",
