@@ -9,9 +9,21 @@ async function getUserIdFromEmail(email: string) {
         return -1;
     }
     else {
-        return userId;
+        return userId.rows[0].id;
     }
 }
 
+async function getUserModelData(email: string) {
+    var modelData = await pool.query(
+        `SELECT * FROM "model" WHERE model_id IN ( 
+            SELECT model_id FROM "user_to_model" WHERE user_id=( 
+                SELECT id FROM "user" WHERE email='${email}'
+            )
+        )`
+    );
 
-export = getUserIdFromEmail;
+    return modelData.rows;
+}
+
+
+export { getUserIdFromEmail, getUserModelData}

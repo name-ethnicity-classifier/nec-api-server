@@ -28,18 +28,19 @@ async function getUserIdFromEmail(email: string) {
 
 
 // create model   
-router.post("/create-model", checkAuthentication, async (req: Request, res: Response) => {
-    logging.info("Model post", "Model creation post request called.");
+router.post("/create-model", async (req: Request, res: Response) => {
+    logging.info("Model post", "Model creation post-request called.");
   
     const modelPlaceholder = {
-        "userEmail": "myAcc@mail.com",
+        "email": "myAcc@mail.com",
         "modelId": uuidv4().split("-").slice(-1)[0],
         "name": "my-thrd-dataset",
         "accuracy": 0.0,
         "description": "-",
         "nationalities": '{"german", "new zealander", "greek", "else"}',
         "scores": '{}', // 90.72, 81.93, 95.04
-        "mode": 0
+        "type": 1, // type 1: custom, type 2: standard
+        "mode": 0 // mode 1: ready to use, mode 0: waiting for training
     }
   
     try {
@@ -47,7 +48,7 @@ router.post("/create-model", checkAuthentication, async (req: Request, res: Resp
         //const modelData = modelPlaceholder;
 
         // get user id from email
-        const userId = await getUserIdFromEmail(modelData.userEmail);
+        const userId = await getUserIdFromEmail(modelData.email);
         if (userId === -1) {
             logging.error("Model post", "User email does not exists.");
     
@@ -58,7 +59,7 @@ router.post("/create-model", checkAuthentication, async (req: Request, res: Resp
 
         // check if the model id already exists
         const checkIdDuplicates = await pool.query(
-            `SELECT EXISTS(SELECT 1 from "model" WHERE model_id='${modelData.modelId}')`
+            `SELECT EXISTS(SELECT 1 FROM "model" WHERE model_id='${modelData.modelId}')`
         );
         if (checkIdDuplicates.rows[0].exists) {
             logging.error("Model post", "Model id already exists.");
@@ -70,14 +71,14 @@ router.post("/create-model", checkAuthentication, async (req: Request, res: Resp
 
         // check if user has already a model with the wanted name
         const modelNameDuplicates = await pool.query(
-            `SELECT user_id from "user_to_model" WHERE model_id IN ( SELECT model_id FROM "model" WHERE name='${modelData.name}' ) AND user_id='${userId}'`
+            `SELECT user_id FROM "user_to_model" WHERE model_id IN ( SELECT model_id FROM "model" WHERE name='${modelData.name}' ) AND user_id='${userId}'`
         );
 
         if (modelNameDuplicates.rows.length > 0) {
             logging.error("Model post", "Model name already exists.");
     
-            return res.status(405).json({
-            error: "modelNameDuplicateExists",
+            return res.status(409).json({
+                error: "modelNameDuplicateExists"
             });
         }
 
@@ -97,6 +98,57 @@ router.post("/create-model", checkAuthentication, async (req: Request, res: Resp
         res.json(newUserModelRelation);
   
   
+    }
+    catch (err) {
+        console.log(err);
+    }
+});
+
+
+// create model   
+router.post("/delete-model", checkAuthentication, async (req: Request, res: Response) => {
+    logging.info("Model post", "Model deletion post-request called.");
+  
+    const modelPlaceholder = {
+        "email": "myAcc@mail.com",
+        "modelId": "hdgdsgvh37gb",
+    }
+  
+    try {
+        const modelData = req.body;
+        //const modelData = modelPlaceholder;
+
+        // get user id from email
+        const userId = await getUserIdFromEmail(modelData.email);
+        if (userId === -1) {
+            logging.error("Model post", "User email does not exist.");
+    
+            return res.status(404).json({
+                error: "emailDoesNotExist",
+            });
+        }
+
+        // check if the model id exists
+        const checkId = await pool.query(
+            `SELECT EXISTS(SELECT 1 from "model" WHERE model_id='${modelData.modelId}')`
+        );
+        if (!checkId.rows[0].exists) {
+            logging.error("Model post", "Model id does not exist.");
+    
+            return res.status(409).json({
+                error: "modelIdDoesNotExist",
+            });
+        }
+
+        // delete model entry
+        const deletedModel = await pool.query(
+            `DELETE FROM "model" WHERE model_id='${modelData.modelId}'`);
+        res.json(deletedModel);
+
+        // delete user-to-model entry
+        const deletedUserModelRelation = await pool.query(
+            `DELETE FROM "user_to_model" WHERE model_id='${modelData.modelId}'`);
+        res.json(deletedUserModelRelation);
     }
     catch (err) {
         console.log(err);

@@ -9,8 +9,8 @@ module.exports = (req: any, res: Response, next: NextFunction) => {
         const decoded = jwt.verify(token, process.env.JWT_KEY);
         req.userData = decoded;
         
-        console.log("WWWWWWW")
-        if (req.userData.email !== req.body.userEmail) {
+        console.log(req.userData.email, req.body)
+        if (req.userData.email !== req.body.email) {
             logging.error("User authorization", "User email doesn't match the email in the token.");
 
             return res.status(401).json({

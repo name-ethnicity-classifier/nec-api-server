@@ -3,6 +3,7 @@ import logging from "../config/logging";
 import config from "../config/config";
 import { v4 as uuidv4 } from "uuid";
 import { Request, Response, NextFunction } from "express";
+import { getUserIdFromEmail, getUserModelData } from "../utils";
 
 require("dotenv").config();
 
@@ -10,6 +11,8 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const cors = require("cors");
 const pool = require("../db");
+const checkAuthentication = require("../middleware/checkAuthentication");
+
 
 const router = express.Router();
 
@@ -20,21 +23,21 @@ function validateEmail(email: string) {
 }
 
 
-// register user
-router.post("/register", async (req: Request, res: Response) => {
+// signup user
+router.post("/signup", async (req: Request, res: Response) => {
     logging.info("Sign up post", "User registration request called.");
   
     const userPlaceholder = {
-        "email": "myAcc@mail.com",
-        "password": "thisIsIt123",
+        "email": "oneMinute@mail.com",
+        "password": "pwd123456789",
         "signupTime": "01/10/2071"
     }
   
     try {   
 
-        const { rawUserData } = req.body;
-        const userData = userPlaceholder; 
-        
+        const userData = req.body;
+        //const userData = userPlaceholder; 
+        console.log(userData)
         // check if email already exists in database
         const checkEmailDuplicates = await pool.query(
             `SELECT EXISTS(SELECT 1 from "user" WHERE email='${userData.email}')`
@@ -83,9 +86,13 @@ router.post("/register", async (req: Request, res: Response) => {
   
     }
     catch (err) {
-        logging.error("Sign up post", err.message);
+        logging.error("Sign up post-request", err.message);
     }
 });
+
+
+
+
 
 
 // login user
@@ -93,13 +100,13 @@ router.post("/login", async (req: Request, res: Response) => {
     logging.info("Log in post", "User login request called.");
   
     const userPlaceholder = {
-        "email": "myAcc@mail.com",
-        "password": "thisIsIt123",
+        "email": "oneMinute@mail.com",
+        "password": "pwd123456789",
     }
   
     try {
-        const { rawUserData } = req.body;
-        const userData = userPlaceholder;
+        //const userData = userPlaceholder;
+        const userData = req.body;
 
         const user = {
             email: userData.email,
@@ -130,6 +137,8 @@ router.post("/login", async (req: Request, res: Response) => {
         );
         userId = await bcrypt.hash(userId.rows[0].id.toString(), 0);
 
+        var userModelData = await getUserModelData(user.email);
+
         bcrypt.compare(user.password, trueHashedPassword, (err: any, result: boolean) => {
             if (err) {
                 logging.error("Log in post", "Password doesn't match.");
@@ -150,10 +159,11 @@ router.post("/login", async (req: Request, res: Response) => {
                         expiresIn: "1h"
                     },
                 )
-
+                
                 return res.status(200).json({
                     message: "successfulAuthentification",
-                    token: token
+                    token: token,
+                    models: userModelData
                 });
             }
             else {
@@ -164,7 +174,80 @@ router.post("/login", async (req: Request, res: Response) => {
         })
     }
     catch (err) {
-        logging.error("Sign up post", err.message);
+        logging.error("Log in post-request", err.message);
+        console.log(err);
+    }
+});
+
+
+// delete user
+router.post("/delete-user", checkAuthentication, async (req: Request, res: Response) => {
+    logging.info("User deletion post", "User deletion post-request called.");
+  
+    const userPlaceholder = {
+        "email": "myAcc@mail.com",
+        "password": "thisIsIt123",
+    }
+
+    try {
+        //const userData = userPlaceholder;
+        const userData = req.body;
+        const userId = await getUserIdFromEmail(userData.email);
+
+        const user = {
+            email: userData.email,
+            id: userId,
+            password: userData.password,
+        };
+        
+        // check if email exists in database
+        const checkEmailExistence = await pool.query(
+            `SELECT EXISTS(SELECT 1 from "user" WHERE email='${user.email}')`
+        );
+        if (!checkEmailExistence.rows[0].exists) {
+            logging.error("User deletion post", "Email doesn't exist.");
+    
+            return res.status(402).json({
+                error: "authorizationFailed",
+            });
+        }
+
+        // get password and check if it matches
+        var trueHashedPassword = await pool.query(
+            `SELECT password from "user" WHERE email='${user.email}'`
+        );
+        trueHashedPassword = trueHashedPassword.rows[0].password;
+        
+        var passwordsMatch = false;
+        bcrypt.compare(user.password, trueHashedPassword, (err: any, result: any) => {
+            if (err) {
+                logging.error("User deletion post", "Password doesn't match.");
+
+                return res.status(402).json({
+                    error: "authorizationFailed",
+                });
+            }
+            else {
+                passwordsMatch = true;
+            }
+        });
+        // delete user entry
+        const deletedUser = await pool.query(
+            `DELETE FROM "user" WHERE email='${user.email}'`);
+        res.json(deletedUser);
+
+        // delete users model entries
+        const deletedModels = await pool.query(
+            `DELETE FROM "model" WHERE model_id IN ( SELECT model_id FROM "user_to_model" WHERE user_id='${user.id}' )`);
+        res.json(deletedModels);
+        
+        // delete user-to-model entries
+        const deletedUserModelRelations = await pool.query(
+            `DELETE FROM "user_to_model" WHERE user_id='${user.id}'`);
+        res.json(deletedUserModelRelations);
+    }
+    catch (err) {
+        logging.error("User deletion post-request", err.message);
         console.log(err);
     }
 });

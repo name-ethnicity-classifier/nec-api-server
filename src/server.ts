@@ -6,7 +6,7 @@ import config from "./config/config";
 import utilRoutes from "./routes/utilRoutes";
 import registerUser from "./routes/databaseRoutes";
 import { v4 as uuidv4 } from "uuid";
-import getUserIdFromEmail from "./utils";
+import { getUserIdFromEmail } from "./utils";
 import { Request, Response, NextFunction } from "express";
 
 
