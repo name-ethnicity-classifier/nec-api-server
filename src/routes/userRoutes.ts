@@ -137,8 +137,6 @@ router.post("/login", async (req: Request, res: Response) => {
         );
         userId = await bcrypt.hash(userId.rows[0].id.toString(), 0);
 
-        var userModelData = await getUserModelData(user.email);
-
         bcrypt.compare(user.password, trueHashedPassword, (err: any, result: boolean) => {
             if (err) {
                 logging.error("Log in post", "Password doesn't match.");
@@ -163,7 +161,6 @@ router.post("/login", async (req: Request, res: Response) => {
                 return res.status(200).json({
                     message: "successfulAuthentification",
                     token: token,
-                    models: userModelData
                 });
             }
             else {

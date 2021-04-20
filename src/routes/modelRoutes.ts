@@ -28,7 +28,7 @@ async function getUserIdFromEmail(email: string) {
 
 
 // create model   
-router.post("/create-model", async (req: Request, res: Response) => {
+router.post("/create-model", checkAuthentication, async (req: Request, res: Response) => {
     logging.info("Model post", "Model creation post-request called.");
   
     const modelPlaceholder = {
@@ -84,9 +84,9 @@ router.post("/create-model", async (req: Request, res: Response) => {
 
         // create model entry
         const newModel = await pool.query(
-            `INSERT INTO "model" (model_id, name, accuracy, description, nationalities, scores, mode) 
+            `INSERT INTO "model" (model_id, name, accuracy, description, nationalities, scores, mode, type) 
             VALUES ('${modelData.modelId}', '${modelData.name}', '${modelData.accuracy}', '${modelData.description}', 
-                    '${modelData.nationalities}', '${modelData.scores}', '${modelData.mode}')`
+                    '${modelData.nationalities}', '${modelData.scores}', '${modelData.mode}', '${modelData.type}')`
             );
         res.json(newModel);
 

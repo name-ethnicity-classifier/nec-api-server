@@ -1,6 +1,9 @@
 import express from "express";
 import { Request, Response, NextFunction } from "express";
 import logging from "../config/logging";
+import { getUserIdFromEmail, getUserModelData } from "../utils";
+
+const checkAuthentication = require("../middleware/checkAuthentication");
 
 
 const serverHealthCheck = (req: Request, res: Response, next: NextFunction) => {
@@ -18,9 +21,16 @@ const getNationalityData = (req: Request, res: Response, next: NextFunction) => 
   return res.status(200).json(data);
 };
 
+async function getUserModels(req: any, res: Response, next: NextFunction) {
+  logging.info("Model data route", "User models route called.");
+  const data = await getUserModelData(req.headers.email);
+
+  return res.status(200).json(data);
+};
+
 
 const router = express.Router();
 router.get("/ping", serverHealthCheck);
 router.get("/nationalities", getNationalityData);
-
+router.get("/my-models", checkAuthentication, getUserModels);
 export = router;
