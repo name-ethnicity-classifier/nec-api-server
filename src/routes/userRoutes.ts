@@ -36,8 +36,7 @@ router.post("/signup", async (req: Request, res: Response) => {
     try {   
 
         const userData = req.body;
-        //const userData = userPlaceholder; 
-        console.log(userData)
+
         // check if email already exists in database
         const checkEmailDuplicates = await pool.query(
             `SELECT EXISTS(SELECT 1 from "user" WHERE email='${userData.email}')`
@@ -70,18 +69,10 @@ router.post("/signup", async (req: Request, res: Response) => {
 
         // hash password
         var passwordHash = await bcrypt.hash(userData.password, 10);
-
-        // create user
-        const user = {
-            email: userData.email,
-            password: passwordHash,
-            signupTime: userData.signupTime
-        };
         
         const newUser = await pool.query(
-            `INSERT INTO "user" (email, password, signup_time) VALUES ('${user.email}', '${user.password}', '${user.signupTime}')`
+            `INSERT INTO "user" (email, password, signup_time) VALUES ('${userData.email}', '${passwordHash}', '${userData.signupTime}')`
         );
-
         res.json(newUser);
   
     }
@@ -108,14 +99,9 @@ router.post("/login", async (req: Request, res: Response) => {
         //const userData = userPlaceholder;
         const userData = req.body;
 
-        const user = {
-            email: userData.email,
-            password: userData.password,
-        };
-        
         // check if email exists in database
         const checkEmailExistence = await pool.query(
-            `SELECT EXISTS(SELECT 1 from "user" WHERE email='${user.email}')`
+            `SELECT EXISTS(SELECT 1 from "user" WHERE email='${userData.email}')`
         );
         if (!checkEmailExistence.rows[0].exists) {
             logging.error("Log in post", "Email doesn't exist.");
@@ -127,17 +113,17 @@ router.post("/login", async (req: Request, res: Response) => {
 
         // get password and check if it matches
         var trueHashedPassword = await pool.query(
-            `SELECT password from "user" WHERE email='${user.email}'`
+            `SELECT password from "user" WHERE email='${userData.email}'`
         );
         trueHashedPassword = trueHashedPassword.rows[0].password;
         
         // get id and hash it
         var userId = await pool.query(
-            `SELECT id from "user" WHERE email='${user.email}'`
+            `SELECT id from "user" WHERE email='${userData.email}'`
         );
         userId = await bcrypt.hash(userId.rows[0].id.toString(), 0);
 
-        bcrypt.compare(user.password, trueHashedPassword, (err: any, result: boolean) => {
+        bcrypt.compare(userData.password, trueHashedPassword, (err: any, result: boolean) => {
             if (err) {
                 logging.error("Log in post", "Password doesn't match.");
 
@@ -149,7 +135,7 @@ router.post("/login", async (req: Request, res: Response) => {
             if (result) {
                 const token = jwt.sign(
                     {
-                        email: user.email,
+                        email: userData.email,
                         id: userId 
                     }, 
                     process.env.JWT_KEY,
@@ -177,29 +163,84 @@ router.post("/login", async (req: Request, res: Response) => {
 });
 
 
-// delete user
-router.post("/delete-user", checkAuthentication, async (req: Request, res: Response) => {
-    logging.info("User deletion post", "User deletion post-request called.");
+// change password
+router.post("/change-password", checkAuthentication, async (req: Request, res: Response) => {
+    logging.info("Password change post", "Password change post-request called.");
   
     const userPlaceholder = {
         "email": "myAcc@mail.com",
         "password": "thisIsIt123",
+        "newPassword": "newPassword123"
     }
 
     try {
         //const userData = userPlaceholder;
         const userData = req.body;
-        const userId = await getUserIdFromEmail(userData.email);
-
-        const user = {
-            email: userData.email,
-            id: userId,
-            password: userData.password,
-        };
+        //const userId = await getUserIdFromEmail(userData.email);
         
         // check if email exists in database
         const checkEmailExistence = await pool.query(
-            `SELECT EXISTS(SELECT 1 from "user" WHERE email='${user.email}')`
+            `SELECT EXISTS(SELECT 1 from "user" WHERE email='${userData.email}')`
+        );
+        if (!checkEmailExistence.rows[0].exists) {
+            logging.error("Password change post", "Email doesn't exist.");
+    
+            return res.status(402).json({
+                error: "authorizationFailed",
+            });
+        }
+
+        // get password and check if it matches
+        var trueHashedPassword = await pool.query(
+            `SELECT password from "user" WHERE email='${userData.email}'`
+        );
+        trueHashedPassword = trueHashedPassword.rows[0].password;
+        
+        bcrypt.compare(userData.password, trueHashedPassword, (err: any, result: any) => {
+            if (!result) {
+                logging.error("Password change post", "Password doesn't match.");
+
+                return res.status(402).json({
+                    error: "authorizationFailed",
+                });
+            }
+        });
+
+        // change password
+        if (userData.newPassword.length < 10) {
+            logging.error("Sign up post", "Password too short.");
+    
+            return res.status(405).json({
+                error: "passwordTooShort",
+            });
+        }
+        else {
+            var passwordHash = await bcrypt.hash(userData.newPassword, 10);
+            const newPassword = await pool.query(
+                `UPDATE "user" SET password = '${passwordHash}' WHERE email = '${userData.email}'`
+            );
+            res.json(newPassword);
+        }
+        
+    }
+    catch (err) {
+        logging.error("Password change post-request", err.message);
+        console.log(err);
+    }
+});
+
+
+// delete user
+router.post("/delete-user", checkAuthentication, async (req: Request, res: Response) => {
+    logging.info("User deletion post", "User deletion post-request called.");
+
+    try {
+        const userData = req.body;
+        const userId = await getUserIdFromEmail(userData.email);
+        
+        // check if email exists in database
+        const checkEmailExistence = await pool.query(
+            `SELECT EXISTS(SELECT 1 from "user" WHERE email='${userData.email}')`
         );
         if (!checkEmailExistence.rows[0].exists) {
             logging.error("User deletion post", "Email doesn't exist.");
@@ -211,13 +252,13 @@ router.post("/delete-user", checkAuthentication, async (req: Request, res: Respo
 
         // get password and check if it matches
         var trueHashedPassword = await pool.query(
-            `SELECT password from "user" WHERE email='${user.email}'`
+            `SELECT password from "user" WHERE email='${userData.email}'`
         );
         trueHashedPassword = trueHashedPassword.rows[0].password;
         
         var passwordsMatch = false;
-        bcrypt.compare(user.password, trueHashedPassword, (err: any, result: any) => {
-            if (err) {
+        bcrypt.compare(userData.password, trueHashedPassword, (err: any, result: any) => {
+            if (!result) {
                 logging.error("User deletion post", "Password doesn't match.");
 
                 return res.status(402).json({
@@ -228,19 +269,20 @@ router.post("/delete-user", checkAuthentication, async (req: Request, res: Respo
                 passwordsMatch = true;
             }
         });
+
         // delete user entry
         const deletedUser = await pool.query(
-            `DELETE FROM "user" WHERE email='${user.email}'`);
+            `DELETE FROM "user" WHERE email='${userData.email}'`);
         res.json(deletedUser);
 
         // delete users model entries
         const deletedModels = await pool.query(
-            `DELETE FROM "model" WHERE model_id IN ( SELECT model_id FROM "user_to_model" WHERE user_id='${user.id}' )`);
+            `DELETE FROM "model" WHERE model_id IN ( SELECT model_id FROM "user_to_model" WHERE user_id='${userId}' )`);
         res.json(deletedModels);
         
         // delete user-to-model entries
         const deletedUserModelRelations = await pool.query(
-            `DELETE FROM "user_to_model" WHERE user_id='${user.id}'`);
+            `DELETE FROM "user_to_model" WHERE user_id='${userData.id}'`);
         res.json(deletedUserModelRelations);
     }
     catch (err) {
@@ -248,8 +290,6 @@ router.post("/delete-user", checkAuthentication, async (req: Request, res: Respo
         console.log(err);
     }
 });
-  
-  
 
 
 module.exports = router;
