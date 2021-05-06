@@ -71,7 +71,7 @@ router.post("/signup", async (req: Request, res: Response) => {
         var passwordHash = await bcrypt.hash(userData.password, 10);
         
         const newUser = await pool.query(
-            `INSERT INTO "user" (email, password, signup_time) VALUES ('${userData.email}', '${passwordHash}', '${userData.signupTime}')`
+            `INSERT INTO "user" (email, password, signup_time, verified) VALUES ('${userData.email}', '${passwordHash}', '${userData.signupTime}', ${false})`
         );
         res.json(newUser);
   
@@ -272,22 +272,26 @@ router.post("/delete-user", checkAuthentication, async (req: Request, res: Respo
 
         // delete user entry
         const deletedUser = await pool.query(
-            `DELETE FROM "user" WHERE email='${userData.email}'`);
+            `DELETE FROM "user" WHERE email='${userData.email}' ;
+             DELETE FROM "model" WHERE model_id IN ( SELECT model_id FROM "user_to_model" WHERE user_id='${userId}' ) ;
+             DELETE FROM "user_to_model" WHERE user_id='${userId}'`
+        );
         res.json(deletedUser);
 
         // delete users model entries
-        const deletedModels = await pool.query(
+        /*const deletedModels = await pool.query(
             `DELETE FROM "model" WHERE model_id IN ( SELECT model_id FROM "user_to_model" WHERE user_id='${userId}' )`);
         res.json(deletedModels);
         
         // delete user-to-model entries
         const deletedUserModelRelations = await pool.query(
-            `DELETE FROM "user_to_model" WHERE user_id='${userData.id}'`);
-        res.json(deletedUserModelRelations);
+            `DELETE FROM "user_to_model" WHERE user_id='${userId}'`);
+
+        res.json(deletedUserModelRelations);*/
+        
     }
     catch (err) {
         logging.error("User deletion post-request", err.message);
-        console.log(err);
     }
 });
 
