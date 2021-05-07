@@ -30,7 +30,8 @@ async function getUserIdFromEmail(email: string) {
 // create model   
 router.post("/create-model", checkAuthentication, async (req: Request, res: Response) => {
     logging.info("Model post", "Model creation post-request called.");
-  
+
+
     const modelPlaceholder = {
         "email": "myAcc@mail.com",
         "modelId": uuidv4().split("-").slice(-1)[0],
@@ -40,12 +41,15 @@ router.post("/create-model", checkAuthentication, async (req: Request, res: Resp
         "nationalities": '{"german", "new zealander", "greek", "else"}',
         "scores": '{}', // 90.72, 81.93, 95.04
         "type": 1, // type 1: custom, type 2: standard
-        "mode": 0 // mode 1: ready to use, mode 0: waiting for training
+        "mode": 0, // mode 1: ready to use, mode 0: waiting for training
     }
   
     try {
         const modelData = req.body;//modelPlaceholder;
         //const modelData = modelPlaceholder;
+
+        var currentdate = new Date(); 
+        var requestTime = `${currentdate.getDate()}/${currentdate.getMonth() + 1}/${currentdate.getFullYear()} ${currentdate.getHours()}:${currentdate.getMinutes()}`
 
         // get user id from email
         const userId = await getUserIdFromEmail(modelData.email);
@@ -54,6 +58,50 @@ router.post("/create-model", checkAuthentication, async (req: Request, res: Resp
     
             return res.status(404).json({
                 error: "emailDoesNotExist",
+            });
+        }
+
+        // detect model creation spam
+        var allUserCreationTimes = await pool.query(
+            `SELECT creation_time FROM "model" WHERE model_id IN ( SELECT model_id FROM "user_to_model" WHERE user_id='${userId}' )`
+        );
+
+        //const modelRequestTime = creationTime.split(" ");
+
+        var potentialSpamCreations = 0;            
+        const creationTimes = allUserCreationTimes.rows.slice().reverse();
+        for (let i=0; i<creationTimes.length; i++) {
+            
+            // date/time of last ith model creation
+            const creationDate = creationTimes[i].creation_time.split(" ")[0];
+            const creationDayTime = creationTimes[i].creation_time.split(" ")[1];
+
+            // date/time of current model creation/request
+            const requestDate = requestTime.split(" ")[0];
+            const requestDayTime = requestTime.split(" ")[1];
+
+            if (creationDate !== requestDate) {
+                break;
+            }
+            else {
+                if (creationDayTime.split(":")[0] === requestDayTime.split(":")[0] && (parseInt(requestDayTime.split(":")[1]) - parseInt(creationDayTime.split(":")[1])) <= 2 ) {
+                    potentialSpamCreations += 1;
+                }
+                else {
+                    break;
+                }
+            }
+
+            if (potentialSpamCreations === 3) {
+                break;
+            }
+        }
+
+        if (potentialSpamCreations === 3) {
+            logging.error("Model post", "Spam creation detected.");
+    
+            return res.status(409).json({
+                error: "tooManyModelCreations",
             });
         }
 
@@ -84,9 +132,9 @@ router.post("/create-model", checkAuthentication, async (req: Request, res: Resp
 
         // create model entry
         const newModel = await pool.query(
-            `INSERT INTO "model" (model_id, name, accuracy, description, nationalities, scores, mode, type) 
+            `INSERT INTO "model" (model_id, name, accuracy, description, nationalities, scores, creation_time, mode, type) 
             VALUES ('${modelData.modelId}', '${modelData.name}', '${modelData.accuracy}', '${modelData.description}', 
-                    '${modelData.nationalities}', '${modelData.scores}', '${modelData.mode}', '${modelData.type}')`
+                    '${modelData.nationalities}', '${modelData.scores}', '${requestTime}', '${modelData.mode}', '${modelData.type}')`
             );
         res.json(newModel);
 

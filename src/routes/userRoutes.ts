@@ -70,8 +70,12 @@ router.post("/signup", async (req: Request, res: Response) => {
         // hash password
         var passwordHash = await bcrypt.hash(userData.password, 10);
         
+        // get creation date and time
+        var currentdate = new Date();
+        var signupTime = `${currentdate.getDate()}/${currentdate.getMonth() + 1}/${currentdate.getFullYear()} ${currentdate.getHours()}:${currentdate.getMinutes()}`
+
         const newUser = await pool.query(
-            `INSERT INTO "user" (email, password, signup_time, verified) VALUES ('${userData.email}', '${passwordHash}', '${userData.signupTime}', ${false})`
+            `INSERT INTO "user" (email, password, signup_time, verified) VALUES ('${userData.email}', '${passwordHash}', '${signupTime}', ${false})`
         );
         res.json(newUser);
   
