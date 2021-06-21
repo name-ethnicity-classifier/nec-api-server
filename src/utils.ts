@@ -15,11 +15,9 @@ async function getUserIdFromEmail(email: string) {
 
 async function getUserModelData(email: string) {
     var modelData = await pool.query(
-        `SELECT * FROM "model" WHERE model_id IN ( 
-            SELECT model_id FROM "user_to_model" WHERE user_id=( 
-                SELECT id FROM "user" WHERE email='${email}'
-            )
-        )`
+        `SELECT * FROM "model" WHERE 
+            model_id IN ( SELECT model_id FROM "user_to_model" WHERE user_id=( SELECT id FROM "user" WHERE email='${email}')) OR type=1
+        `
     );
 
     return modelData.rows;
