@@ -4,10 +4,13 @@ import config from "../config/config";
 import utilRoutes from "../routes/utilRoutes";
 import { v4 as uuidv4 } from "uuid";
 import { Request, Response, NextFunction } from "express";
+var fs = require('fs');
+
 
 const cors = require("cors");
 const pool = require("../db");
 const checkAuthentication = require("../middleware/checkAuthentication");
+const spawn = require("child_process").spawn;
 
 const router = express.Router();
 
@@ -164,9 +167,8 @@ router.post("/delete-model", checkAuthentication, async (req: Request, res: Resp
   
     try {
         const modelData = req.body;
-        //const modelData = modelPlaceholder;
 
-        // get user id from email
+        // check if email exists
         const userId = await getUserIdFromEmail(modelData.email);
         if (userId === -1) {
             logging.error("Model post", "User email does not exist.");
@@ -202,5 +204,104 @@ router.post("/delete-model", checkAuthentication, async (req: Request, res: Resp
         console.log(err);
     }
 });
+
+
+// create model
+router.post("/classify-names", checkAuthentication, async (req: Request, res: Response) => {
+    logging.info("Classification post", "Classification post-request called.");
+
+    const email = String(req.headers.email);
+    const modelName = String(req.headers.model);
+
+    // check if email exists
+    const userId = await getUserIdFromEmail(email);
+    if (userId === -1) {
+        logging.error("Model post", "User email does not exist.");
+
+        return res.status(404).json({
+            error: "emailDoesNotExist",
+        });
+    }
+
+    // check if the model id exists
+    const checkId = await pool.query(
+        `SELECT EXISTS(SELECT 1 from "model" WHERE name='${modelName}')`
+    );
+    if (!checkId.rows[0].exists) {
+        logging.error("Model post", "Model id does not exist.");
+
+        return res.status(409).json({
+            error: "modelIdDoesNotExist",
+        });
+    }
+
+    try {
+        if(req.busboy) {
+            req.busboy.on("file", function(fieldName, file, fileName, encoding, mimeType) {
+                if (fileName.split(".").pop() !== "csv") {
+                    logging.error("Classification post", "Uploaded file has wrong file extension.");
+
+                    return res.status(406).json({
+                        error: "wrongFileExtension",
+                    });
+                }
+
+                var fileStream = fs.createWriteStream("./tmp-csv/" + fileName);
+                file.pipe(fileStream);
+                fileStream.on("close", function() {
+                    res.send("uploadSucceeded");
+                });
+                
+            });
+            req.pipe(req.busboy);
+
+            // ~# classify.py -model -csv
+            const classifyingProcess = spawn("python",["nec-model/test.py"]);
+            classifyingProcess.stdout.on("data", function(data: any) {
+
+                console.log(data.toString());
+                //res.write(data);
+                //res.end("end");
+                //d = data.toString();
+            });
+        }
+        
+        else {
+            logging.error("Classification post", "Wrong content type (has to be form-data).");
+
+            return res.status(406).json({
+                error: "wrongContentType",
+            });
+        }
+
+        // get user id from email
+        /*const userId = await getUserIdFromEmail(classificationData.body.email);
+        if (userId === -1) {
+            logging.error("Classification post", "User email does not exist.");
+    
+            return res.status(404).json({
+                error: "emailDoesNotExist",
+            });
+        }
+
+        // check if the model id exists
+        const checkModelName = await pool.query(
+            `SELECT EXISTS(SELECT 1 from "model" WHERE model_name='${classificationData.body.modelName}')`
+        );
+        if (!checkModelName.rows[0].exists) {
+            logging.error("Model post", "Model name does not exist.");
+    
+            return res.status(409).json({
+                error: "modelNameDoesNotExist",
+            });
+        }
+
+        console.log(classificationData.body.imageData)*/
+    }
+    catch (err) {
+        console.log(err);
+    }
+});
+
 
 module.exports = router;
