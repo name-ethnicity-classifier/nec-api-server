@@ -199,8 +199,9 @@ router.post("/change-password", checkAuthentication, async (req: Request, res: R
             `SELECT password from "user" WHERE email='${userData.email}'`
         );
         trueHashedPassword = trueHashedPassword.rows[0].password;
-        
+
         bcrypt.compare(userData.password, trueHashedPassword, (err: any, result: any) => {
+            console.log(result)
             if (!result) {
                 logging.error("Password change post", "Password doesn't match.");
 
