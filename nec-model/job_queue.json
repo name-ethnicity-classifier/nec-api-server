@@ -1,121 +1,4 @@
 {
-    "e45e0c7e106a": {
-        "time": "2021-05-11 15:28:14",
-        "nationalities": [
-            "german",
-            "new zealander",
-            "greek"
-        ],
-        "ready": true
-    },
-    "57a09660c018": {
-        "time": "2021-05-11 15:28:14",
-        "nationalities": [
-            "german",
-            "new zealander",
-            "greek",
-            "else"
-        ],
-        "ready": false
-    },
-    "9230c5ae8612": {
-        "time": "2021-05-11 15:28:14",
-        "nationalities": [
-            "else",
-            "caadian",
-            "spnish",
-            "ameican"
-        ],
-        "ready": false
-    },
-    "681d64661a71": {
-        "time": "2021-05-11 15:28:14",
-        "nationalities": [
-            "else",
-            "vietnmese",
-            "britsh"
-        ],
-        "ready": false
-    },
-    "b45ad9391fb0": {
-        "time": "2021-05-11 15:28:14",
-        "nationalities": [
-            "german",
-            "new zealander",
-            "greek",
-            "else"
-        ],
-        "ready": false
-    },
-    "eb3f412282cc": {
-        "time": "2021-05-11 15:28:14",
-        "nationalities": [
-            "german",
-            "new zealander",
-            "greek",
-            "else"
-        ],
-        "ready": false
-    },
-    "93a6f2780c47": {
-        "time": "2021-05-11 15:28:14",
-        "nationalities": [
-            "german",
-            "new zealander",
-            "greek",
-            "else"
-        ],
-        "ready": false
-    },
-    "hdgdsg33vh37gb": {
-        "time": "2021-05-11 15:28:14",
-        "nationalities": [
-            "german",
-            "new zealander",
-            "greek"
-        ],
-        "ready": false
-    },
-    "hd76433vh37gb": {
-        "time": "2021-05-11 15:28:14",
-        "nationalities": [
-            "german",
-            "new zealander",
-            "greek"
-        ],
-        "ready": false
-    },
-    "hd764337gb": {
-        "time": "2021-05-11 15:28:14",
-        "nationalities": [
-            "german",
-            "new zealander",
-            "greek"
-        ],
-        "ready": false
-    },
-    "hd764347gb": {
-        "time": "2021-05-11 15:28:14",
-        "nationalities": [
-            "german",
-            "new zealander",
-            "greek"
-        ],
-        "ready": false
-    },
-    "e90b466dbd00": {
-        "time": "2021-05-11 15:28:14",
-        "nationalities": [
-            "else",
-            "pakistani",
-            "italian",
-            "romanian",
-            "lithuanian",
-            "mexcan",
-            "caadian"
-        ],
-        "ready": false
-    },
     "8cb0e51c74da": {
         "time": "2021-05-11 15:28:14",
         "nationalities": [
@@ -125,7 +8,7 @@
             "italian",
             "irish"
         ],
-        "ready": false
+        "ready": true
     },
     "16d951245b3a": {
         "time": "2021-05-11 15:28:14",
@@ -490,6 +373,16 @@
             "spnish",
             "ameican",
             "ziabwean"
+        ],
+        "ready": false
+    },
+    "e45e0c7e106a": {
+        "time": "2021-05-19 18:23:39",
+        "nationalities": [
+            "german",
+            "new zealander",
+            "greek",
+            "else"
         ],
         "ready": false
     }

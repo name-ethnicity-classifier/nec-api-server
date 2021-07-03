@@ -23,5 +23,17 @@ async function getUserModelData(email: string) {
     return modelData.rows;
 }
 
+async function getStandardModelData() {
+    var modelData = await pool.query(
+        `SELECT * FROM "model" WHERE type=1`
+    );
 
-export { getUserIdFromEmail, getUserModelData}
+    return modelData.rows;
+}
+
+
+export { getUserIdFromEmail, getUserModelData, getStandardModelData}
+
+
+
+

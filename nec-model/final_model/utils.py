@@ -108,11 +108,18 @@ def show_progress(epochs: int, epoch: int, train_loss: float, train_accuracy: fl
     :return None
     """
 
+    """ colored version (not supported by all consoles)
     epochs = colored(epoch, "cyan", attrs=["bold"]) + colored("/", "cyan", attrs=["bold"]) + colored(epochs, "cyan", attrs=["bold"])
     train_accuracy = colored(round(train_accuracy, 4), "cyan", attrs=["bold"]) + colored("%", "cyan", attrs=["bold"])
     train_loss = colored(round(train_loss, 6), "cyan", attrs=["bold"])
     val_accuracy = colored(round(val_accuracy, 4), "cyan", attrs=["bold"]) + colored("%", "cyan", attrs=["bold"])
     val_loss = colored(round(val_loss, 6), "cyan", attrs=["bold"])
+    """
+    epochs = str(epoch) + "/" + str(epochs)
+    train_accuracy = str(train_accuracy) + "%"
+    train_loss = str(train_loss)
+    val_accuracy = str(val_accuracy) + "%"
+    val_loss = str(val_loss)
     
     print("epoch {} train_loss: {} - train_acc: {} - val_loss: {} - val_acc: {}".format(epochs, train_loss, train_accuracy, val_loss, val_accuracy), "\n")
 
@@ -203,3 +210,11 @@ def init_xavier_weights(m):
         nn.init.xavier_uniform_(m.weight_hh_l0.data)
 
 
+def load_json(file_path: str) -> dict:
+    with open(file_path, "r") as f:
+        return json.load(f)
+
+
+def write_json(file_path: str, content: dict) -> None:
+    with open(file_path, "w") as f:
+        json.dump(content, f, indent=4)

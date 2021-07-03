@@ -76,3 +76,13 @@ logger.log("-> finished running job", show_time=False, tab=1)
 logger.info("creating directory for next job [{}]".format("1234567"), show_time=False)
 logger.info("creating directory for next job [{}]".format("1234567"), show_time=False)
 logger.log("-> finished running job", show_time=False, tab=1)"""
+
+
+import torch
+
+v = torch.rand(3).unsqueeze(0)
+print(v.shape)
+m = torch.rand(3, 1080, 1080).transpose(0, 1)
+r = torch.matmul(v, m).transpose(0, 1)
+
+print(r.shape)

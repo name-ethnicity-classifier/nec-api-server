@@ -11,13 +11,14 @@ import { Request, Response, NextFunction } from "express";
 
 const cors = require("cors");
 const pool = require("./db");
+const busboy = require("connect-busboy");
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded());
-
+app.use(busboy());
 
 const userRoutes = require("./routes/userRoutes");
 const modelRoutes = require("./routes/modelRoutes");

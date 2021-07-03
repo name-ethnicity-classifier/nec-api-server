@@ -1,0 +1,44 @@
+
+
+[INFO] 2021-05-24 20:02:34 : starting next job: [e90b466dbd00]
+[INFO] 2021-05-24 20:02:34 : creating directory for next job [e90b466dbd00]
+[INFO] 2021-05-24 20:02:34 : starting preprocessing job [e90b466dbd00].
+[ERROR] 2021-05-24 20:02:35 : failed to run job [e90b466dbd00]. 
+
+	error: 
+	'mexcan' is not in list
+
+[ERROR] 2021-05-24 20:02:35 : job [e90b466dbd00] aborted.
+
+[INFO] 2021-05-24 20:03:23 : starting next job: [e90b466dbd00]
+[INFO] 2021-05-24 20:03:23 : creating directory for next job [e90b466dbd00]
+[WARN] 2021-05-24 20:03:23 : job directory with id [e90b466dbd00] does already exist! Reinitializing.
+[INFO] 2021-05-24 20:03:23 : starting preprocessing job [e90b466dbd00].
+[ERROR] 2021-05-24 20:03:24 : failed to run job [e90b466dbd00]. 
+
+	error: 
+	'inian' is not in list
+
+[ERROR] 2021-05-24 20:03:24 : job [e90b466dbd00] aborted.
+
+[INFO] 2021-05-24 20:03:40 : starting next job: [e90b466dbd00]
+[INFO] 2021-05-24 20:03:40 : creating directory for next job [e90b466dbd00]
+[WARN] 2021-05-24 20:03:40 : job directory with id [e90b466dbd00] does already exist! Reinitializing.
+[INFO] 2021-05-24 20:03:40 : starting preprocessing job [e90b466dbd00].
+[ERROR] 2021-05-24 20:03:41 : failed to run job [e90b466dbd00]. 
+
+	error: 
+	'irish' is not in list
+
+[ERROR] 2021-05-24 20:03:41 : job [e90b466dbd00] aborted.
+
+[INFO] 2021-05-24 20:04:14 : starting next job: [e90b466dbd00]
+[INFO] 2021-05-24 20:04:14 : creating directory for next job [e90b466dbd00]
+[WARN] 2021-05-24 20:04:14 : job directory with id [e90b466dbd00] does already exist! Reinitializing.
+[INFO] 2021-05-24 20:04:14 : starting preprocessing job [e90b466dbd00].
+       -> finished preprocessing job [e90b466dbd00] (took: 50.839 seconds).
+[INFO] 2021-05-24 20:05:05 : starting training job [e90b466dbd00].
+       -> finished training job [e90b466dbd00] (took: 73.135 seconds).
+[INFO] 2021-05-24 20:06:18 : starting evaluting job [e90b466dbd00].
+       -> finished evaluting job [e90b466dbd00] (took: 1.101 seconds).
+[INFO] 2021-05-24 20:06:19 : job [e90b466dbd00] finished.

@@ -15,10 +15,10 @@ import torch.utils.data
 import torch.nn as nn
 from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence
 
-from model import ConvLSTM as Model
-from utils import create_dataloader, show_progress, onehot_to_string, init_xavier_weights, device, char_indices_to_string, lr_scheduler
-from test_metrics import validate_accuracy, create_confusion_matrix, recall, precision, f1_score, score_plot
-import xman
+from final_model.model import ConvLSTM as Model
+from final_model.utils import create_dataloader, show_progress, onehot_to_string, init_xavier_weights, device, char_indices_to_string, lr_scheduler, write_json, load_json
+from final_model.test_metrics import validate_accuracy, create_confusion_matrix, recall, precision, f1_score, score_plot
+import final_model.xman as xman
 
 
 
@@ -27,19 +27,19 @@ torch.manual_seed(0)
 
 
 class TrainSetup:
-    def __init__(self, model_config: dict):
+    def __init__(self, model_config: dict, silent: bool=True):
         self.model_config = model_config
 
-        # model file and name
+        # model/job name, path
         self.model_name = model_config["model-name"]
-        self.model_file = "models/" + model_config["model-name"] + ".pt"
+        self.job_directory_name = "nec_user_models/" + self.model_name + "/"
+        self.model_file = self.job_directory_name + "model.pt"
 
         # dataset parameters
-        self.dataset_name = "../datasets/preprocessed_datasets/" + model_config["dataset-name"]
-        self.dataset_path = self.dataset_name + "/matrix_name_list.pickle"
+        self.dataset_path = self.job_directory_name + "dataset/dataset.pickle"
         self.test_size = model_config["test-size"]
 
-        with open(self.dataset_name + "/nationality_classes.json", "r") as f: 
+        with open(self.job_directory_name + "dataset/nationalities.json", "r") as f: 
             self.classes = json.load(f) 
             self.total_classes = len(self.classes)
 
@@ -57,6 +57,7 @@ class TrainSetup:
         self.lr = model_config["lr-schedule"][0]
         self.lr_decay_rate = model_config["lr-schedule"][1]
         self.lr_decay_intervall = model_config["lr-schedule"][2]
+
         # unpack cnn parameters (idx 0: amount of layers, idx 1: kernel size, idx 2: list of feature map dimensions)
         self.cnn_layers = model_config["cnn-parameters"][0]
         self.kernel_size = model_config["cnn-parameters"][1]
@@ -79,6 +80,8 @@ class TrainSetup:
                             batch_size=self.batch_size,
                             custom_parameters=model_config)
 
+        self.silent = silent
+
     def _validate(self, model, dataset, confusion_matrix: bool=False, plot_scores: bool=False):
         validation_dataset = dataset
 
@@ -86,7 +89,7 @@ class TrainSetup:
         losses = []
         total_targets, total_predictions = [], []
 
-        for names, targets, _ in tqdm(validation_dataset, desc="validating", ncols=150):
+        for names, targets, _ in (tqdm(validation_dataset, desc="validating", ncols=150) if not self.silent else validation_dataset):
             names = names.to(device=device)
             targets = targets.to(device=device)
 
@@ -107,18 +110,18 @@ class TrainSetup:
         loss = np.mean(losses)
 
         # calculate accuracy
-        accuracy = 100 * sklearn.metrics.accuracy_score(total_targets, total_predictions)
-        # own: accuracy = validate_accuracy(total_targets, total_predictions, threshold=0.4)
+        #accuracy = 100 * sklearn.metrics.accuracy_score(total_targets, total_predictions)
+        accuracy = validate_accuracy(total_targets, total_predictions, threshold=0.4)
 
         # calculate precision, recall and F1 scores
-        precision_scores = sklearn.metrics.precision_score(total_targets, total_predictions, average=None)
-        # own: precision_scores = precision(total_targets, total_predictions, classes=self.total_classes)
+        #precision_scores = sklearn.metrics.precision_score(total_targets, total_predictions, average=None)
+        precision_scores = precision(total_targets, total_predictions, classes=self.total_classes)
 
-        recall_scores = sklearn.metrics.recall_score(total_targets, total_predictions, average=None)
-        # own: recall_scores = recall(total_targets, total_predictions, classes=self.total_classes)
+        #recall_scores = sklearn.metrics.recall_score(total_targets, total_predictions, average=None)
+        recall_scores = recall(total_targets, total_predictions, classes=self.total_classes)
 
-        f1_scores = sklearn.metrics.f1_score(total_targets, total_predictions, average=None)
-        # own: f1_scores = f1_score(precision_scores2, recall_scores2)
+        #f1_scores = sklearn.metrics.f1_score(total_targets, total_predictions, average=None)
+        f1_scores = f1_score(precision_scores, recall_scores)
     	
         # create confusion matrix
         if confusion_matrix:
@@ -129,9 +132,10 @@ class TrainSetup:
 
         return loss, accuracy, (precision_scores, recall_scores, f1_scores)
 
-    def train(self):
+    def train(self, silent: bool=True):
+        os.environ["WANDB_SILENT"] = "true"
         wandb_id = str(hashlib.sha256(self.model_name.encode("utf-8")).hexdigest())[:8]
-        wandb.init(project="name-ethnicity-final-models", entity="theodorp", id=wandb_id, resume=self.continue_, config=self.model_config)
+        wandb.init(project="nec-user-models", entity="theodorp", id=wandb_id, resume=self.continue_, config=self.model_config)
 
         model = Model(class_amount=self.total_classes, hidden_size=self.hidden_size, layers=self.rnn_layers, dropout_chance=self.dropout_chance, \
                       embedding_size=self.embedding_size, kernel_size=self.kernel_size, channels=self.channels).to(device=device)
@@ -149,7 +153,7 @@ class TrainSetup:
 
             total_train_targets, total_train_predictions = [], []
             epoch_train_loss = []
-            for names, targets, _ in tqdm(self.train_set, desc="epoch", ncols=150):
+            for names, targets, _ in (tqdm(self.train_set, desc="epoch", ncols=150) if not self.silent else self.train_set):
                 optimizer.zero_grad()
 
                 names = names.to(device=device)
@@ -187,23 +191,24 @@ class TrainSetup:
             epoch_val_loss, epoch_val_accuracy, _ = self._validate(model, self.validation_set)
 
             # print training stats in pretty format
-            show_progress(self.epochs, epoch, epoch_train_loss, epoch_train_accuracy, epoch_val_loss, epoch_val_accuracy)
-            print("\nlr: ", optimizer.param_groups[0]["lr"], "\n")
+            if not silent:
+                show_progress(self.epochs, epoch, epoch_train_loss, epoch_train_accuracy, epoch_val_loss, epoch_val_accuracy)
+                print("\nlr: ", optimizer.param_groups[0]["lr"], "\n")
 
             # save checkpoint of model
             torch.save(model.state_dict(), self.model_file)
 
             # log with wandb
             wandb.log({"validation-accuracy": epoch_val_accuracy, "validation-loss": epoch_val_loss, "train-accuracy": epoch_train_accuracy, "train-loss": epoch_train_loss})
-            os.path.join(wandb.run.dir, "model2.pt")
 
             # log epoch results with xman (uncomment if you have the xman libary installed)
             self.xmanager.log_epoch(model, self.lr, self.batch_size, epoch_train_accuracy, epoch_train_loss, epoch_val_accuracy, epoch_val_loss)
 
         # plot train-history with xman (uncomment if you have the xman libary installed)
-        self.xmanager.plot_history(save=True)
+        if not silent:
+            self.xmanager.plot_history(save=True)
 
-    def test(self, print_amount: int=None, plot_confusion_matrix: bool=True, plot_scores: bool=True):
+    def test(self, print_amount: int=None, plot_confusion_matrix: bool=False, plot_scores: bool=False):
         model = Model(class_amount=self.total_classes, hidden_size=self.hidden_size, layers=self.rnn_layers, dropout_chance=0.0, \
                       embedding_size=self.embedding_size, kernel_size=self.kernel_size, channels=self.channels).to(device=device)
 
@@ -270,8 +275,17 @@ class TrainSetup:
                     pass
         
         precisions, recalls, f1_scores = scores
-        print("\n\ntest accuracy:", accuracy)
-        print("\nprecision of every class:", precisions)
-        print("\nrecall of every class:", recalls)
-        print("\nf1-score of every class:", f1_scores)
+        # print("\n\ntest accuracy:", accuracy)
+        # print("\nprecision of every class:", precisions)
+        # print("\nrecall of every class:", recalls)
+        # print("\nf1-score of every class:", f1_scores)
 
+        # save scores and config to job directory
+        entry = load_json(self.job_directory_name + "results.json")
+        entry["accuracy"] = accuracy
+        entry["precision-scores"] = precisions
+        entry["recall-scores"] = recalls
+        entry["f1-scores"] = f1_scores
+        write_json(self.job_directory_name + "results.json", entry)
+
+        write_json(self.job_directory_name + "config.json", self.model_config)

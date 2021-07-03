@@ -23,3 +23,5 @@ def load_json(file_path: str) -> dict:
 def write_json(file_path: str, content: dict) -> None:
     with open(file_path, "w") as f:
             json.dump(content, f, indent=4)
+
+
