@@ -14,8 +14,8 @@ const SERVER = {
 // DB config
 const POSTGRESQL_HOST = process.env.POSTGRESQL_HOST || "localhost";
 const POSTGRESQL_DATABASE = process.env.POSTGRESQL_DATABASE || "nec-user-db";
-const POSTGRESQL_USER = process.env.POSTGRESQL_USER || "tedmin";
-const POSTGRESQL_PASSWORD = process.env.POSTGRESQL_PASSWORD || "#nec!#2345!#caktus!#420!#";
+const POSTGRESQL_USER = process.env.POSTGRESQL_USER || "postgres";
+const POSTGRESQL_PASSWORD = process.env.POSTGRESQL_PASSWORD || "#buddaloves69"; // #nec!#2345!#caktus!#420!#
 const POSTGRESQL_PORT = process.env.POSTGRESQL_PORT || 5432;
 
 const POSTGRESQL = {

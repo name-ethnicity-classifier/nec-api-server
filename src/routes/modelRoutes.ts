@@ -138,7 +138,7 @@ router.post("/create-model", checkAuthentication, async (req: Request, res: Resp
             `INSERT INTO "model" (model_id, name, accuracy, description, nationalities, scores, creation_time, mode, type) 
             VALUES ('${modelData.modelId}', '${modelData.name}', '${modelData.accuracy}', '${modelData.description}', 
                     '${modelData.nationalities}', '${modelData.scores}', '${requestTime}', '${modelData.mode}', '${modelData.type}')`
-            );
+        );
         res.json(newModel);
 
         // create user-to-model entry
@@ -224,10 +224,10 @@ router.post("/classify-names", checkAuthentication, async (req: Request, res: Re
     }
 
     // check if the model id exists
-    const checkId = await pool.query(
-        `SELECT EXISTS(SELECT 1 from "model" WHERE name='${modelName}')`
+    const modelIdObject = await pool.query(
+        `SELECT model_id from "model" WHERE name='${modelName}'`
     );
-    if (!checkId.rows[0].exists) {
+    if (modelIdObject.rows.length === 0) {
         logging.error("Model post", "Model id does not exist.");
 
         return res.status(409).json({
@@ -235,35 +235,36 @@ router.post("/classify-names", checkAuthentication, async (req: Request, res: Re
         });
     }
 
+    const modelId = modelIdObject.rows[0].model_id;
     try {
         if(req.busboy) {
-            req.busboy.on("file", function(fieldName, file, fileName, encoding, mimeType) {
+            req.busboy.on("file", function(fieldName, file, fileName, encoding, mimeType, ) {                
                 if (fileName.split(".").pop() !== "csv") {
-                    logging.error("Classification post", "Uploaded file has wrong file extension.");
+                    logging.error("Classification post", "Uploaded file has a wrong file extension (must be '.csv').");
 
                     return res.status(406).json({
                         error: "wrongFileExtension",
                     });
                 }
 
-                var fileStream = fs.createWriteStream("./tmp-csv/" + fileName);
+                var fileStream = fs.createWriteStream("./nec-model/tmp-csv/" + fileName.split(".")[0] + "_in_" + modelId + ".csv");
                 file.pipe(fileStream);
                 fileStream.on("close", function() {
                     res.send("uploadSucceeded");
                 });
+
+                // ~# classify.py -model -csv
+                const classifyingProcess = spawn("python", ["nec-model/classify.py", "--id", `${modelId}`, "--fileName", `${fileName}`]);
+                classifyingProcess.stdout.on("data", function(data: any) {
+
+                    console.log(data.toString());
+                    //res.write(data);
+                    //res.end("end");
+                    //d = data.toString();
+                });
                 
             });
             req.pipe(req.busboy);
-
-            // ~# classify.py -model -csv
-            const classifyingProcess = spawn("python",["nec-model/test.py"]);
-            classifyingProcess.stdout.on("data", function(data: any) {
-
-                console.log(data.toString());
-                //res.write(data);
-                //res.end("end");
-                //d = data.toString();
-            });
         }
         
         else {
