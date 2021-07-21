@@ -41,10 +41,11 @@ def push_standard_model(model_name: str, model_config: dict, nationalities: dict
         type_ = 1       # = standard model type
 
         cursor.execute(
-        f"""
-        INSERT INTO "model" (model_id, name, accuracy, description, nationalities, scores, creation_time, mode, type) 
-        VALUES ('{model_id}', '{model_name}', '{accuracy}', '{description}', '{nationality_string_list}', '{score_string_list}', '{creation_time}', '{mode}', '{type_}')
-        """)
+            f"""
+            INSERT INTO "model" (model_id, name, accuracy, description, nationalities, scores, creation_time, mode, type) 
+            VALUES ('{model_id}', '{model_name}', '{accuracy}', '{description}', '{nationality_string_list}', '{score_string_list}', '{creation_time}', '{mode}', '{type_}')
+            """
+        )
 
         connection.commit()
         connection.close()

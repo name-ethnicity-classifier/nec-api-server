@@ -54,8 +54,27 @@ def finish_job(queue_file: str="", job_id: str="") -> None:
     write_json(queue_file, open_jobs)
 
 
-def push_next_job(job_id: str) -> None:
-    pass
+def push_job_to_db(job_id: str) -> None:
+    job_directory = "nec_user_models/" + job_id
+    scores = load_json(job_directory + "/results.json")
+
+    accuracy = scores["accuracy"]
+    f1_scores = scores["f1-scores"]
+    score_string_list = "{" + ", ".join([str(s) for s in f1_scores])[:-1] + "}"
+
+    connection = connect_to_db()
+    cursor = connection.cursor()
+
+    cursor.execute(
+        f"""
+        UPDATE "model" 
+        SET accuracy='{accuracy}', scores='{score_string_list}', mode=1 
+        WHERE model_id='{job_id}'
+        """
+    )
+
+    connection.commit()
+    connection.close()
 
 
 if __name__ == "__main__":
@@ -77,7 +96,7 @@ if __name__ == "__main__":
             create_job_space(job_id)
 
             # preprocess the data for the next job
-            logger.info("starting preprocessing job [{}].".format(job_id))
+            logger.info("started preprocessing job [{}].".format(job_id))
             start = time.time()
             preprocess(job_id=job_id, nationalities=nationalities, raw_dataset_path="datasets/raw_datasets/total_names_dataset.pickle")
             logger.log("-> finished preprocessing job [{}] (took: {} seconds).".format(job_id, round(time.time() - start, 3)), show_time=False, tab=1)
@@ -86,7 +105,7 @@ if __name__ == "__main__":
             train_job = trainer(job_id=job_id)
 
             # train job
-            logger.info("starting training job [{}].".format(job_id))
+            logger.info("started training job [{}].".format(job_id))
             start = time.time()
             train_job.train()
             logger.log("-> finished training job [{}] (took: {} seconds).".format(job_id, round(time.time() - start, 3)), show_time=False, tab=1)
@@ -97,15 +116,18 @@ if __name__ == "__main__":
             train_job.test()
             logger.log("-> finished evaluting job [{}] (took: {} seconds).".format(job_id, round(time.time() - start, 3)), show_time=False, tab=1)
 
+            # mark model as trained in the database by setting 'mode=1' and insert the scores
+            push_job_to_db(job_id=job_id)
+            logger.info("updated the database entry of job [{}].".format(job_id))
+
             # pop finished job and get next one ready
             finish_job(job_id=job_id, queue_file="job_queue.json")
             logger.info("job [{}] finished.".format(job_id))
 
         except Exception as err:
             logger.error("failed to run job [{}]. \n\n\terror: \n\t{}\n".format(job_id, str(err).replace("\n", "\n\t")))
-            logger.error("job [{}] aborted.".format(job_id))
-        
-
+            shutil.rmtree("nec_user_models/" + job_id)
+            logger.error("job [{}] aborted, removed job directory.".format(job_id))
 
         time.sleep(1)
 
