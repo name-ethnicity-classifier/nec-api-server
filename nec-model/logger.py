@@ -14,9 +14,11 @@ class Logging:
     def clear_log(self):
         open(self.log_file, "w").close()
 
-    def log(self, message: str="", show_time: bool=True, tab: int=0, br: bool=False):
+    def log(self, message: str="", show_time: bool=True, tab: int=0, br: bool=False, tag: str=None):
+        tag = "" if tag == None else "[" + tag + "] "
+
         time = str(datetime.datetime.now()).split(".")[0] + " : " if show_time else " "
-        message = "{}{}{}".format((tab * 6 * " "), time, message)
+        message = "{}{}{}{}".format(tag, (tab * 6 * " "), time, message)
 
         if br: message = "\n" + message
 
@@ -60,7 +62,12 @@ class Logging:
         print(message)
 
 
-"""logger = Logging(log_file="test.log")
+
+
+
+""" test
+
+logger = Logging(log_file="test.log")
 logger.info("creating directory for next job [{}]".format("1234567"))
 logger.info("creating directory for next job [{}]".format("1234567"))
 logger.log("-> created directory", show_time=False, tab=1)
@@ -75,14 +82,6 @@ logger.info("creating directory for next job [{}]".format("1234567"))
 logger.log("-> finished running job", show_time=False, tab=1)
 logger.info("creating directory for next job [{}]".format("1234567"), show_time=False)
 logger.info("creating directory for next job [{}]".format("1234567"), show_time=False)
-logger.log("-> finished running job", show_time=False, tab=1)"""
+logger.log("-> finished running job", show_time=False, tab=1)
 
-
-import torch
-
-v = torch.rand(3).unsqueeze(0)
-print(v.shape)
-m = torch.rand(3, 1080, 1080).transpose(0, 1)
-r = torch.matmul(v, m).transpose(0, 1)
-
-print(r.shape)
+"""

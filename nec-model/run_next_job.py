@@ -3,6 +3,7 @@ import os
 import time
 from typing import Union
 import shutil
+import traceback
 
 from logger import Logging
 from utils import connect_to_db, load_json, write_json
@@ -49,9 +50,16 @@ def create_job_space(job_id: str=""):
 
 def finish_job(queue_file: str="", job_id: str="") -> None:
     open_jobs = load_json(queue_file)
+
+    # remove the just train job
     open_jobs.pop(job_id, None)
-    open_jobs[list(open_jobs.keys())[0]]["ready"] = True
-    write_json(queue_file, open_jobs)
+
+    # mark the next job as read if there is one
+    if len(open_jobs) > 0:
+        open_jobs[list(open_jobs.keys())[0]]["ready"] = True
+        write_json(queue_file, open_jobs)
+    else:
+        open(queue_file, "w").close()
 
 
 def push_job_to_db(job_id: str) -> None:
@@ -60,7 +68,7 @@ def push_job_to_db(job_id: str) -> None:
 
     accuracy = scores["accuracy"]
     f1_scores = scores["f1-scores"]
-    score_string_list = "{" + ", ".join([str(s) for s in f1_scores])[:-1] + "}"
+    score_string_list = "{" + ", ".join([str(s) for s in f1_scores]) + "}"
 
     connection = connect_to_db()
     cursor = connection.cursor()
@@ -77,7 +85,7 @@ def push_job_to_db(job_id: str) -> None:
     connection.close()
 
 
-if __name__ == "__main__":
+def run_next_job():
     next_job = get_next_job("job_queue.json")
 
     if next_job == -1:
@@ -125,9 +133,6 @@ if __name__ == "__main__":
             logger.info("job [{}] finished.".format(job_id))
 
         except Exception as err:
-            logger.error("failed to run job [{}]. \n\n\terror: \n\t{}\n".format(job_id, str(err).replace("\n", "\n\t")))
+            logger.error("failed to run job [{}]. \n\n\terror: \n\t{}\n".format(job_id, traceback.format_exc())) # old error message: str(err).replace("\n", "\n\t")
             shutil.rmtree("nec_user_models/" + job_id)
             logger.error("job [{}] aborted, removed job directory.".format(job_id))
-
-        time.sleep(1)
-
