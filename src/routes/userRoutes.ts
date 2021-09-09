@@ -27,14 +27,7 @@ function validateEmail(email: string) {
 router.post("/signup", async (req: Request, res: Response) => {
     logging.info("Sign up post", "User registration request called.");
   
-    const userPlaceholder = {
-        "email": "oneMinute@mail.com",
-        "password": "pwd123456789",
-        "signupTime": "01/10/2071"
-    }
-  
     try {   
-
         const userData = req.body;
 
         // check if email already exists in database
@@ -80,7 +73,7 @@ router.post("/signup", async (req: Request, res: Response) => {
         res.json(newUser);
   
     }
-    catch (err) {
+    catch (err: any) {
         logging.error("Sign up post-request", err.message);
     }
 });
@@ -94,13 +87,7 @@ router.post("/signup", async (req: Request, res: Response) => {
 router.post("/login", async (req: Request, res: Response) => {
     logging.info("Log in post", "User login request called.");
   
-    const userPlaceholder = {
-        "email": "oneMinute@mail.com",
-        "password": "pwd123456789",
-    }
-  
     try {
-        //const userData = userPlaceholder;
         const userData = req.body;
 
         // check if email exists in database
@@ -144,7 +131,7 @@ router.post("/login", async (req: Request, res: Response) => {
                     }, 
                     process.env.JWT_KEY,
                     {
-                        expiresIn: "1h"
+                        expiresIn: "10d"
                     },
                 )
                 
@@ -160,7 +147,7 @@ router.post("/login", async (req: Request, res: Response) => {
             }
         })
     }
-    catch (err) {
+    catch (err: any) {
         logging.error("Log in post-request", err.message);
         console.log(err);
     }
@@ -170,17 +157,9 @@ router.post("/login", async (req: Request, res: Response) => {
 // change password
 router.post("/change-password", checkAuthentication, async (req: Request, res: Response) => {
     logging.info("Password change post", "Password change post-request called.");
-  
-    const userPlaceholder = {
-        "email": "myAcc@mail.com",
-        "password": "thisIsIt123",
-        "newPassword": "newPassword123"
-    }
 
     try {
-        //const userData = userPlaceholder;
         const userData = req.body;
-        //const userId = await getUserIdFromEmail(userData.email);
         
         // check if email exists in database
         const checkEmailExistence = await pool.query(
@@ -228,7 +207,7 @@ router.post("/change-password", checkAuthentication, async (req: Request, res: R
         }
         
     }
-    catch (err) {
+    catch (err: any) {
         logging.error("Password change post-request", err.message);
         console.log(err);
     }
@@ -295,7 +274,7 @@ router.post("/delete-user", checkAuthentication, async (req: Request, res: Respo
         res.json(deletedUserModelRelations);*/
         
     }
-    catch (err) {
+    catch (err: any) {
         logging.error("User deletion post-request", err.message);
     }
 });

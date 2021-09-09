@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from "uuid";
 import { Request, Response, NextFunction } from "express";
 var fs = require('fs');
 
-
+var path = require("path");
 const cors = require("cors");
 const pool = require("../db");
 const checkAuthentication = require("../middleware/checkAuthentication");
@@ -34,22 +34,8 @@ async function getUserIdFromEmail(email: string) {
 router.post("/create-model", checkAuthentication, async (req: Request, res: Response) => {
     logging.info("Model post", "Model creation post-request called.");
 
-
-    const modelPlaceholder = {
-        "email": "myAcc@mail.com",
-        "modelId": uuidv4().split("-").slice(-1)[0],
-        "name": "my-thrd-dataset",
-        "accuracy": 0.0,
-        "description": "-",
-        "nationalities": '{"german", "new zealander", "greek", "else"}',
-        "scores": '{}', // 90.72, 81.93, 95.04
-        "type": 1, // type 1: custom, type 2: standard
-        "mode": 0, // mode 1: ready to use, mode 0: waiting for training
-    }
-  
     try {
-        const modelData = req.body;//modelPlaceholder;
-        //const modelData = modelPlaceholder;
+        const modelData = req.body;
 
         var currentdate = new Date(); 
         var requestTime = `${currentdate.getDate()}/${currentdate.getMonth() + 1}/${currentdate.getFullYear()} ${currentdate.getHours()}:${currentdate.getMinutes()}`
@@ -68,8 +54,6 @@ router.post("/create-model", checkAuthentication, async (req: Request, res: Resp
         var allUserCreationTimes = await pool.query(
             `SELECT creation_time FROM "model" WHERE model_id IN ( SELECT model_id FROM "user_to_model" WHERE user_id='${userId}' )`
         );
-
-        //const modelRequestTime = creationTime.split(" ");
 
         var potentialSpamCreations = 0;            
         const creationTimes = allUserCreationTimes.rows.slice().reverse();
@@ -160,11 +144,6 @@ router.post("/create-model", checkAuthentication, async (req: Request, res: Resp
 router.post("/delete-model", checkAuthentication, async (req: Request, res: Response) => {
     logging.info("Model post", "Model deletion post-request called.");
   
-    const modelPlaceholder = {
-        "email": "myAcc@mail.com",
-        "modelId": "hdgdsgvh37gb",
-    }
-  
     try {
         const modelData = req.body;
 
@@ -250,17 +229,35 @@ router.post("/classify-names", checkAuthentication, async (req: Request, res: Re
                 var fileStream = fs.createWriteStream("./nec-model/tmp-csv/" + fileName.split(".")[0] + "_in_" + modelId + ".csv");
                 file.pipe(fileStream);
                 fileStream.on("close", function() {
-                    res.send("uploadSucceeded");
+                    //res.send("uploadSucceeded");
                 });
 
                 // ~# classify.py -model -csv
                 const classifyingProcess = spawn("python", ["nec-model/classify.py", "--id", `${modelId}`, "--fileName", `${fileName}`]);
+                console.log(classifyingProcess);
                 classifyingProcess.stdout.on("data", function(data: any) {
-
                     console.log(data.toString());
                     //res.write(data);
                     //res.end("end");
                     //d = data.toString();
+                    //res.send("classificationSucceeded");
+
+                    var options = {
+                        root: path.join(__dirname + "/..")
+                    };
+
+                    const outputFileName = "data/output-files/" + fileName.split(".")[0] + "_out_" + modelId + ".csv";
+                    res.sendFile(outputFileName, options, function (err) {
+                        if (err) {
+                            logging.error("Classification post", "Couldn't send output file to client.", err);
+                            return res.status(400).json({
+                                error: "classificationFailed",
+                            });
+                        } else {
+                            logging.info("Classification post", "Sent output file to client.");
+                        }
+                    });
+                    
                 });
                 
             });
