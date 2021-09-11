@@ -12,8 +12,6 @@ const bcrypt = require("bcrypt");
 const cors = require("cors");
 const pool = require("../db");
 const checkAuthentication = require("../middleware/checkAuthentication");
-
-
 const router = express.Router();
 
 
@@ -21,6 +19,22 @@ function validateEmail(email: string) {
     const re = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
     return re.test(String(email).toLowerCase());
 }
+
+
+router.get("/authentication-check", checkAuthentication, async (req: Request, res: Response) => {
+    logging.info("Authentication check post", "User authentication-check request called.");
+
+    try {
+        return res.status(200).json({
+            message: "stillAuthenticated"
+        });
+    }
+    catch (err: any) {
+        console.log(err);
+        logging.error("Authentication check post", err.message);
+    }
+
+});
 
 
 // signup user

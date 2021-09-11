@@ -10,11 +10,11 @@ module.exports = (req: any, res: Response, next: NextFunction) => {
         req.userData = decoded;
         next();
     }
-    catch (error) {
+    catch (err) {
         logging.error("User authorization", "Token not provided (invalid or expired).");
 
         return res.status(401).json({
-            error: "authorizationProhibited"
+            err: "authorizationProhibited"
         });
     }
 }
