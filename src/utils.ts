@@ -1,5 +1,8 @@
 import logging from "./config/logging";
+import nodemailer from "nodemailer";
+import config from "./config/config";
 
+const jwt = require("jsonwebtoken");
 const pool = require("./db");
 
 
@@ -62,10 +65,50 @@ async function addStandardModelData() {
 }
 
 
+async function sendVerificationEmail(userEmail: string) {
+    const emailToken = jwt.sign(
+        {
+            email: userEmail,
+        },
+        process.env.JWT_EMAIL_KEY,
+        {
+            expiresIn: "1d"
+        },
+    );
+
+    const transporter = nodemailer.createTransport({
+        host: config.mail.host,
+        port: config.mail.port,
+        auth: {
+            user: config.mail.user,
+            pass: config.mail.password,
+        }
+    });
+    
+    const confirmationUrl = `http://localhost:1337/confirmation/${emailToken}`;
+
+    const emailMessage = {
+        from: "name-ethnicity-classifier noreply",
+        to: userEmail,
+        subject: "Name ethnicity classifier account confirmation.",
+        html: `Click on this link to confirm your email: <a href="${confirmationUrl}">${confirmationUrl}</a>`
+    }
+
+    transporter.sendMail(emailMessage, (err: any, info: any) => {
+        if (err) {
+            logging.error("Sign up post", "Couldn't send verification email.");
+        }
+        else {
+            logging.info("Sign up post", "Sent confirmation email.");
+        }
+    });
+}
+
+
 // addStandardModelData();
 
 
-export { getUserIdFromEmail, getUserModelData, getStandardModelData}
+export { getUserIdFromEmail, getUserModelData, getStandardModelData, sendVerificationEmail }
 
 
 

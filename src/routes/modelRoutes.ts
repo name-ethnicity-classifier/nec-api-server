@@ -237,10 +237,6 @@ router.post("/classify-names", checkAuthentication, async (req: Request, res: Re
                 console.log(classifyingProcess);
                 classifyingProcess.stdout.on("data", function(data: any) {
                     console.log(data.toString());
-                    //res.write(data);
-                    //res.end("end");
-                    //d = data.toString();
-                    //res.send("classificationSucceeded");
 
                     var options = {
                         root: path.join(__dirname + "/..")
@@ -271,35 +267,13 @@ router.post("/classify-names", checkAuthentication, async (req: Request, res: Re
                 error: "wrongContentType",
             });
         }
-
-        // get user id from email
-        /*const userId = await getUserIdFromEmail(classificationData.body.email);
-        if (userId === -1) {
-            logging.error("Classification post", "User email does not exist.");
-    
-            return res.status(404).json({
-                error: "emailDoesNotExist",
-            });
-        }
-
-        // check if the model id exists
-        const checkModelName = await pool.query(
-            `SELECT EXISTS(SELECT 1 from "model" WHERE model_name='${classificationData.body.modelName}')`
-        );
-        if (!checkModelName.rows[0].exists) {
-            logging.error("Model post", "Model name does not exist.");
-    
-            return res.status(409).json({
-                error: "modelNameDoesNotExist",
-            });
-        }
-
-        console.log(classificationData.body.imageData)*/
     }
     catch (err) {
         console.log(err);
     }
 });
+
+
 
 
 module.exports = router;

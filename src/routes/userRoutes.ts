@@ -3,7 +3,9 @@ import logging from "../config/logging";
 import config from "../config/config";
 import { v4 as uuidv4 } from "uuid";
 import { Request, Response, NextFunction } from "express";
-import { getUserIdFromEmail, getUserModelData } from "../utils";
+import { getUserIdFromEmail, sendVerificationEmail } from "../utils";
+import nodemailer from "nodemailer";
+
 
 require("dotenv").config();
 
@@ -85,10 +87,11 @@ router.post("/signup", async (req: Request, res: Response) => {
             `INSERT INTO "user" (email, password, signup_time, verified) VALUES ('${userData.email}', '${passwordHash}', '${signupTime}', ${false})`
         );
         res.json(newUser);
-  
+
+        sendVerificationEmail(userData.email);
     }
     catch (err: any) {
-        logging.error("Sign up post-request", err.message);
+        logging.error("Sign up post", err.message);
     }
 });
 
@@ -111,8 +114,22 @@ router.post("/login", async (req: Request, res: Response) => {
         if (!checkEmailExistence.rows[0].exists) {
             logging.error("Log in post", "Email doesn't exist.");
     
-            return res.status(402).json({
+            return res.status(401).json({
                 error: "authenticationFailed",
+            });
+        }
+
+        // check verification
+        const verified = await pool.query(
+            `SELECT verified from "user" WHERE email='${userData.email}'`
+        );
+        if (!verified.rows[0].verified) {
+            logging.error("Log in post", "User not verified, sending new verification email.");
+    
+            sendVerificationEmail(userData.email);
+
+            return res.status(401).json({
+                error: "userNotVerified",
             });
         }
 
@@ -182,7 +199,7 @@ router.post("/change-password", checkAuthentication, async (req: Request, res: R
         if (!checkEmailExistence.rows[0].exists) {
             logging.error("Password change post", "Email doesn't exist.");
     
-            return res.status(402).json({
+            return res.status(401).json({
                 error: "authorizationFailed",
             });
         }
@@ -198,7 +215,7 @@ router.post("/change-password", checkAuthentication, async (req: Request, res: R
             if (!result) {
                 logging.error("Password change post", "Password doesn't match.");
 
-                return res.status(402).json({
+                return res.status(401).json({
                     error: "authorizationFailed",
                 });
             }
@@ -215,7 +232,7 @@ router.post("/change-password", checkAuthentication, async (req: Request, res: R
         else {
             var passwordHash = await bcrypt.hash(userData.newPassword, 10);
             const newPassword = await pool.query(
-                `UPDATE "user" SET password = '${passwordHash}' WHERE email = '${userData.email}'`
+                `UPDATE "user" SET password='${passwordHash}' WHERE email='${userData.email}'`
             );
             res.json(newPassword);
         }
@@ -243,7 +260,7 @@ router.post("/delete-user", checkAuthentication, async (req: Request, res: Respo
         if (!checkEmailExistence.rows[0].exists) {
             logging.error("User deletion post", "Email doesn't exist.");
     
-            return res.status(402).json({
+            return res.status(401).json({
                 error: "authorizationFailed",
             });
         }
@@ -259,7 +276,7 @@ router.post("/delete-user", checkAuthentication, async (req: Request, res: Respo
             if (!result) {
                 logging.error("User deletion post", "Password doesn't match.");
 
-                return res.status(402).json({
+                return res.status(401).json({
                     error: "authorizationFailed",
                 });
             }
@@ -275,23 +292,32 @@ router.post("/delete-user", checkAuthentication, async (req: Request, res: Respo
              DELETE FROM "user_to_model" WHERE user_id='${userId}'`
         );
         res.json(deletedUser);
-
-        // delete users model entries
-        /*const deletedModels = await pool.query(
-            `DELETE FROM "model" WHERE model_id IN ( SELECT model_id FROM "user_to_model" WHERE user_id='${userId}' )`);
-        res.json(deletedModels);
-        
-        // delete user-to-model entries
-        const deletedUserModelRelations = await pool.query(
-            `DELETE FROM "user_to_model" WHERE user_id='${userId}'`);
-
-        res.json(deletedUserModelRelations);*/
         
     }
     catch (err: any) {
         logging.error("User deletion post-request", err.message);
     }
 });
+
+
+router.get("/confirmation/:emailToken", async (req: Request, res: Response) => {
+    try {
+        const emailToken = req.params.emailToken;
+        const decoded = jwt.verify(emailToken, process.env.JWT_EMAIL_KEY);
+        
+        const confirm = await pool.query(
+            `UPDATE "user" SET verified=true WHERE email='${decoded.email}'`
+        );
+
+        return res.redirect("http://localhost:3000/login");
+    }
+    catch (e: any) {
+        return res.status(404).json({
+            error: "confirmationFailed",
+        });
+    }
+});
+
 
 
 module.exports = router;

@@ -26,10 +26,24 @@ const POSTGRESQL = {
   port: POSTGRESQL_PORT
 };
 
+// mail config
+const EMAIL_HOST = "smtp.ethereal.email";
+const EMAIL_PORT = 587;
+const EMAIL_USER = "caleb.champlin11@ethereal.email";
+const EMAIL_PASSWORD = "HBRdFPNfzbdztTzbUR";
 
+const MAIL = {
+  host: EMAIL_HOST,
+  port: EMAIL_PORT,
+  user: EMAIL_USER,
+  password: EMAIL_PASSWORD,
+};
+
+// total config
 const config = {
   server: SERVER,
-  db: POSTGRESQL
+  db: POSTGRESQL,
+  mail:  MAIL
 };
 
 export default config;
