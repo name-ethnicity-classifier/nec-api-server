@@ -77,8 +77,10 @@ async function sendVerificationEmail(userEmail: string) {
     );
 
     const transporter = nodemailer.createTransport({
+        name: config.mail.host,
         host: config.mail.host,
         port: config.mail.port,
+        secure: true,
         auth: {
             user: config.mail.user,
             pass: config.mail.password,
@@ -88,15 +90,15 @@ async function sendVerificationEmail(userEmail: string) {
     const confirmationUrl = `http://localhost:1337/confirmation/${emailToken}`;
 
     const emailMessage = {
-        from: "name-ethnicity-classifier noreply",
+        from: "name-ethnicity-classifier <necweb.noreply@gmail.com>",
         to: userEmail,
         subject: "Name ethnicity classifier account confirmation.",
-        html: `Click on this link to confirm your email: <a href="${confirmationUrl}">${confirmationUrl}</a>`
+        html: `<b>Hey there!</b><br/><br/>Did you just create an account for the "name-ethnicity-classifier"? If so, please confirm it by clicking on the link below:<br/><br/><a style="color:#3F7CF7" href="${confirmationUrl}"><b>Confirm account.</b></a><br/><br/>Please do not reply to this email. Thanks!`
     }
-
+    
     transporter.sendMail(emailMessage, (err: any, info: any) => {
         if (err) {
-            logging.error("Sign up post", "Couldn't send verification email.");
+            logging.error("Sign up post", "Couldn't send verification email.", err);
         }
         else {
             logging.info("Sign up post", "Sent confirmation email.");

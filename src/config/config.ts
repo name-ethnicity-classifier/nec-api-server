@@ -27,10 +27,10 @@ const POSTGRESQL = {
 };
 
 // mail config
-const EMAIL_HOST = "smtp.ethereal.email";
-const EMAIL_PORT = 587;
-const EMAIL_USER = "caleb.champlin11@ethereal.email";
-const EMAIL_PASSWORD = "HBRdFPNfzbdztTzbUR";
+const EMAIL_HOST = "smtp.gmail.com";
+const EMAIL_PORT = 465;
+const EMAIL_USER = "necweb.noreply@gmail.com";
+const EMAIL_PASSWORD = "#Very#Fy#Sender#101#";
 
 const MAIL = {
   host: EMAIL_HOST,
