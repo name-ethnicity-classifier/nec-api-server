@@ -1,19 +1,13 @@
 import express from "express";
 import logging from "../config/logging";
-import config from "../config/config";
-import utilRoutes from "../routes/utilRoutes";
-import { v4 as uuidv4 } from "uuid";
-import { Request, Response, NextFunction } from "express";
-var fs = require('fs');
+import { Request, Response } from "express";
 
+var fs = require("fs");
 var path = require("path");
-const cors = require("cors");
 const pool = require("../db");
 const checkAuthentication = require("../middleware/checkAuthentication");
 const spawn = require("child_process").spawn;
-
 const router = express.Router();
-
 
 
 async function getUserIdFromEmail(email: string) {
@@ -27,7 +21,6 @@ async function getUserIdFromEmail(email: string) {
         return userId.rows[0].id;
     }
 }
-
 
 
 // create model   
@@ -229,15 +222,12 @@ router.post("/classify-names", checkAuthentication, async (req: Request, res: Re
                 var fileStream = fs.createWriteStream("./nec-model/tmp-csv/" + fileName.split(".")[0] + "_in_" + modelId + ".csv");
                 file.pipe(fileStream);
                 fileStream.on("close", function() {
-                    //res.send("uploadSucceeded");
+                    // res.send("uploadSucceeded");
                 });
 
-                // ~# classify.py -model -csv
                 const classifyingProcess = spawn("python", ["nec-model/classify.py", "--id", `${modelId}`, "--fileName", `${fileName}`]);
-                console.log(classifyingProcess);
-                classifyingProcess.stdout.on("data", function(data: any) {
-                    console.log(data.toString());
 
+                classifyingProcess.stdout.on("data", function(data: any) {
                     var options = {
                         root: path.join(__dirname + "/..")
                     };

@@ -1,20 +1,14 @@
 import express from "express";
 import logging from "../config/logging";
-import config from "../config/config";
-import { v4 as uuidv4 } from "uuid";
-import { Request, Response, NextFunction } from "express";
+import { Request, Response } from "express";
 import { getUserIdFromEmail, sendVerificationEmail } from "../utils";
-import nodemailer from "nodemailer";
-
-
-require("dotenv").config();
 
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
-const cors = require("cors");
 const pool = require("../db");
 const checkAuthentication = require("../middleware/checkAuthentication");
 const router = express.Router();
+require("dotenv").config();
 
 
 function validateEmail(email: string) {
@@ -94,10 +88,6 @@ router.post("/signup", async (req: Request, res: Response) => {
         logging.error("Sign up post", err.message);
     }
 });
-
-
-
-
 
 
 // login user

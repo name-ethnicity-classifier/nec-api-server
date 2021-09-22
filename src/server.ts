@@ -3,14 +3,10 @@ import express from "express";
 import logging from "./config/logging";
 import config from "./config/config";
 import utilRoutes from "./routes/utilRoutes";
-import registerUser from "./routes/databaseRoutes";
-import { v4 as uuidv4 } from "uuid";
-import { getUserIdFromEmail } from "./utils";
 import { Request, Response, NextFunction } from "express";
 
 
 const cors = require("cors");
-const pool = require("./db");
 const busboy = require("connect-busboy");
 
 const app = express();
