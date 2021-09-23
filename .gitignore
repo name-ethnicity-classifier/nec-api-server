@@ -1,6 +1,6 @@
-tmp-csv/
+tmp-csv/*
 nec-model/datasets/
 nec-model/model_configurations/
 nec-model/wandb/
 nec-model/x-manager/
-node-modules/
+/node_modules
