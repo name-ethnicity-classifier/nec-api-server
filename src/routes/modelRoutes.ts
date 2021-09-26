@@ -219,7 +219,7 @@ router.post("/classify-names", checkAuthentication, async (req: Request, res: Re
                     });
                 }
 
-                var fileStream = fs.createWriteStream("./nec-model/tmp-csv/" + fileName.split(".")[0] + "_in_" + modelId + ".csv");
+                var fileStream = fs.createWriteStream("./nec-model/datasets/tmp_data/" + fileName.split(".")[0] + "_in_" + modelId + ".csv");
                 file.pipe(fileStream);
                 fileStream.on("close", function() {
                     // res.send("uploadSucceeded");
@@ -229,25 +229,33 @@ router.post("/classify-names", checkAuthentication, async (req: Request, res: Re
 
                 classifyingProcess.stdout.on("data", function(data: any) {
                     var options = {
-                        root: path.join(__dirname + "/..")
+                        root: path.join(__dirname + "/../..")
                     };
 
-                    const outputFileName = "data/output-files/" + fileName.split(".")[0] + "_out_" + modelId + ".csv";
+                    console.log(options.root);
+
+                    const outputFileName = "./nec-model/datasets/tmp_data/" + fileName.split(".")[0] + "_out_" + modelId + ".csv";
                     res.sendFile(outputFileName, options, function (err) {
                         if (err) {
                             logging.error("Classification post", "Couldn't send output file to client.", err);
                             return res.status(400).json({
                                 error: "classificationFailed",
                             });
-                        } else {
+                        } 
+                        else {
                             logging.info("Classification post", "Sent output file to client.");
+                            fs.unlink("./nec-model/datasets/tmp_data/" + fileName.split(".")[0] + "_out_" + modelId + ".csv", function(err: any) {
+                                if (err) {
+                                    logging.error("Classification post", "Couldn't remove output file.", err); 
+                                }
+                            });            
                         }
                     });
-                    
                 });
-                
             });
             req.pipe(req.busboy);
+
+            
         }
         
         else {
