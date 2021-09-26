@@ -118,13 +118,13 @@ if __name__ == "__main__":
         model_id = args["id"]
 
         # get input and output path
-        csv_in_path = "nec-model/tmp_data/" + args["fileName"].split(".")[0] + "_in_" + model_id + ".csv"
-        csv_out_path = "nec-model/tmp_data/" + args["fileName"].split(".")[0] + "_out_" + model_id + ".csv" 
+        csv_in_path = "nec-classification/tmp_data/" + args["fileName"].split(".")[0] + "_in_" + model_id + ".csv"
+        csv_out_path = "nec-classification/tmp_data/" + args["fileName"].split(".")[0] + "_out_" + model_id + ".csv" 
 
         # get the train configurations
-        model_config = load_json("nec-model/nec_user_models/" + model_id + "/config.json")
-        classes = load_json("nec-model/nec_user_models/" + model_id + "/dataset/nationalities.json")
-        model_file = "nec-model/nec_user_models/" + model_id + "/model.pt"
+        model_config = load_json("nec-classification/nec_user_models/" + model_id + "/config.json")
+        classes = load_json("nec-classification/nec_user_models/" + model_id + "/dataset/nationalities.json")
+        model_file = "nec-classification/nec_user_models/" + model_id + "/model.pt"
         names = pd.read_csv(csv_in_path)["names"].tolist()
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         batch_size = 32
