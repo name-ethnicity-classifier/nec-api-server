@@ -219,7 +219,7 @@ router.post("/classify-names", checkAuthentication, async (req: Request, res: Re
                     });
                 }
 
-                var fileStream = fs.createWriteStream("./nec-model/datasets/tmp_data/" + fileName.split(".")[0] + "_in_" + modelId + ".csv");
+                var fileStream = fs.createWriteStream("./nec-model/tmp_data/" + fileName.split(".")[0] + "_in_" + modelId + ".csv");
                 file.pipe(fileStream);
                 fileStream.on("close", function() {
                     // res.send("uploadSucceeded");
@@ -234,7 +234,7 @@ router.post("/classify-names", checkAuthentication, async (req: Request, res: Re
 
                     console.log(options.root);
 
-                    const outputFileName = "./nec-model/datasets/tmp_data/" + fileName.split(".")[0] + "_out_" + modelId + ".csv";
+                    const outputFileName = "./nec-model/tmp_data/" + fileName.split(".")[0] + "_out_" + modelId + ".csv";
                     res.sendFile(outputFileName, options, function (err) {
                         if (err) {
                             logging.error("Classification post", "Couldn't send output file to client.", err);
@@ -244,7 +244,7 @@ router.post("/classify-names", checkAuthentication, async (req: Request, res: Re
                         } 
                         else {
                             logging.info("Classification post", "Sent output file to client.");
-                            fs.unlink("./nec-model/datasets/tmp_data/" + fileName.split(".")[0] + "_out_" + modelId + ".csv", function(err: any) {
+                            fs.unlink("./nec-model/tmp_data/" + fileName.split(".")[0] + "_out_" + modelId + ".csv", function(err: any) {
                                 if (err) {
                                     logging.error("Classification post", "Couldn't remove output file.", err); 
                                 }
