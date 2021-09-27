@@ -19,7 +19,7 @@ const serverHealthCheck = (req: Request, res: Response, next: NextFunction) => {
 // get a dictionary of all available nationalities and their amount of samples
 const getNationalityData = (req: Request, res: Response, next: NextFunction) => {
 	logging.info("Nationality data route", "Available nationalities route called.");
-	var data = require("../data/nationalityData.json");
+	var data = require("../../data/nationalityData.json");
 
 	// filter out nationalities with too little amount of samples
 	const MAX_NAMES_PER_NATIONALITY = 5000;

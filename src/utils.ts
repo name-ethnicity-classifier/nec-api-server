@@ -39,7 +39,7 @@ async function getStandardModelData() {
 async function addStandardModelData() {
     logging.info("Standard model push", "Pushing new standard models.");
 
-    var data = require("./data/standardModelData.json");
+    var data = require("../data/standardModelData.json");
     Object.keys(data).forEach(async (model: any) => {
         try {
             // check if the model id already exists
