@@ -225,16 +225,14 @@ router.post("/classify-names", checkAuthentication, async (req: Request, res: Re
                     // res.send("uploadSucceeded");
                 });
 
-                const classifyingProcess = spawn("python", ["nec-classification/classify.py", "--id", `${modelId}`, "--fileName", `${fileName}`]);
+                const classifyingProcess = spawn("python3", ["nec-classification/classify.py", "--id", `${modelId}`, "--fileName", `${fileName}`]);
 
                 classifyingProcess.stdout.on("data", function(data: any) {
                     var options = {
                         root: path.join(__dirname + "/../..")
                     };
 
-                    console.log(options.root);
-
-                    const outputFileName = "./nec-classification/tmp_data/" + fileName.split(".")[0] + "_out_" + modelId + ".csv";
+                    const outputFileName = "nec-classification/tmp_data/" + fileName.split(".")[0] + "_out_" + modelId + ".csv";
                     res.sendFile(outputFileName, options, function (err) {
                         if (err) {
                             logging.error("Classification post", "Couldn't send output file to client.", err);
@@ -244,7 +242,7 @@ router.post("/classify-names", checkAuthentication, async (req: Request, res: Re
                         } 
                         else {
                             logging.info("Classification post", "Sent output file to client.");
-                            fs.unlink("./nec-classification/tmp_data/" + fileName.split(".")[0] + "_out_" + modelId + ".csv", function(err: any) {
+                            fs.unlink("nec-classification/tmp_data/" + fileName.split(".")[0] + "_out_" + modelId + ".csv", function(err: any) {
                                 if (err) {
                                     logging.error("Classification post", "Couldn't remove output file.", err); 
                                 }
