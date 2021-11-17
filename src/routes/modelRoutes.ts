@@ -225,12 +225,15 @@ router.post("/classify-names", checkAuthentication, async (req: Request, res: Re
                     // res.send("uploadSucceeded");
                 });
 
-                const classifyingProcess = spawn("python3", ["nec-classification/classify.py", "--id", `${modelId}`, "--fileName", `${fileName}`]);
+                const classifyingProcess = spawn("python", ["nec-classification/classify.py", "--id", `${modelId}`, "--fileName", `${fileName}`]);
 
                 classifyingProcess.stdout.on("data", function(data: any) {
                     var options = {
                         root: path.join(__dirname + "/../..")
                     };
+                    
+                    // uncomment for debugging:
+                    // console.log(data.toString());
 
                     const outputFileName = "nec-classification/tmp_data/" + fileName.split(".")[0] + "_out_" + modelId + ".csv";
                     res.sendFile(outputFileName, options, function (err) {

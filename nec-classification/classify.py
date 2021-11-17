@@ -6,25 +6,34 @@ from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence
 import argparse
 import numpy as np
 import json
-import pandas as  pd
+import csv
 import string
 from typing import Union
 import os
 import time
 import traceback
+import sys
 
 from model import ConvLSTM as Model
 
 
 def load_json(file_path: str) -> dict:
-    """ load json content
-    
-    :param str filepath: path to json file 
-    :return dict: json object
-    """
-
     with open(file_path, "r") as f:
         return json.load(f)
+
+
+def load_input(file_path: str) -> list:
+    with open(file_path, "r") as f:
+        names = csv.reader(f)
+        return [e[0] for e in list(names)[1:]]
+
+
+def save_output(file_path: str, names: list, ethnicities: list) -> None:
+    with open(file_path, "w", newline="") as f:
+        csv_writer = csv.writer(f)
+        csv_writer.writerow(["names", "ethnicities"])
+        for i in range(len(ethnicities)):
+            csv_writer.writerow([names[i], ethnicities[i]])
 
 
 def preprocess_names(names: list=[str], batch_size: int=128) -> torch.tensor:
@@ -107,8 +116,9 @@ def predict(input_batch: torch.tensor, model_config: dict, device: torch.device)
     return total_predicted_ethncitities
     
 
-if __name__ == "__main__":
+if __name__ == "__main__":    
     # read flag arguments
+
     try:
         parser = argparse.ArgumentParser()
         parser.add_argument("-i", "--id", required=True)
@@ -125,7 +135,7 @@ if __name__ == "__main__":
         model_config = load_json("nec-classification/nec_user_models/" + model_id + "/config.json")
         classes = load_json("nec-classification/nec_user_models/" + model_id + "/dataset/nationalities.json")
         model_file = "nec-classification/nec_user_models/" + model_id + "/model.pt"
-        names = pd.read_csv(csv_in_path)["names"].tolist()
+        names = load_input(csv_in_path)
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         batch_size = 32
 
@@ -143,13 +153,7 @@ if __name__ == "__main__":
 
         # predict ethnicities
         ethnicities = predict(input_batch, model_config, device)
-
-        df = pd.DataFrame()
-        df["names"] = names
-        df["ethnicities"] = ethnicities
-
-        open(csv_out_path, "w+").close()
-        df.to_csv(csv_out_path, index=False)
+        save_output(csv_out_path, names, ethnicities)
 
         # remove temporary csv file
         os.remove(csv_in_path)
@@ -158,8 +162,7 @@ if __name__ == "__main__":
 
     except Exception as e:
         print(traceback.format_exc())
-
-
+        sys.stdout.flush()
 
     
 
