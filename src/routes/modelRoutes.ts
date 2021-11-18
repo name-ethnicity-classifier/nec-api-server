@@ -124,8 +124,6 @@ router.post("/create-model", checkAuthentication, async (req: Request, res: Resp
             VALUES ('${userId}', '${modelData.modelId}')`
             );
         res.json(newUserModelRelation);
-  
-  
     }
     catch (err) {
         console.log(err);
@@ -141,14 +139,14 @@ router.post("/delete-model", checkAuthentication, async (req: Request, res: Resp
         const modelData = req.body;
 
         // check if email exists
-        const userId = await getUserIdFromEmail(modelData.email);
+        /*const userId = await getUserIdFromEmail(modelData.email);
         if (userId === -1) {
             logging.error("Model post", "User email does not exist.");
     
             return res.status(404).json({
                 error: "emailDoesNotExist",
             });
-        }
+        }*/
 
         // check if the model id exists
         const checkId = await pool.query(
