@@ -2,13 +2,15 @@ import express from "express";
 import logging from "../config/logging";
 import { Request, Response } from "express";
 import { getUserIdFromEmail, sendVerificationEmail } from "../utils";
+import dotenv from "dotenv";
+import config from "../config/config";
 
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const pool = require("../db");
 const checkAuthentication = require("../middleware/checkAuthentication");
 const router = express.Router();
-require("dotenv").config();
+dotenv.config();
 
 
 function validateEmail(email: string) {
@@ -109,20 +111,6 @@ router.post("/login", async (req: Request, res: Response) => {
             });
         }
 
-        // check verification
-        const verified = await pool.query(
-            `SELECT verified from "user" WHERE email='${userData.email}'`
-        );
-        if (!verified.rows[0].verified) {
-            logging.error("Log in post", "User not verified, sending new verification email.");
-    
-            sendVerificationEmail(userData.email);
-
-            return res.status(401).json({
-                error: "userNotVerified",
-            });
-        }
-
         // get password and check if it matches
         var trueHashedPassword = await pool.query(
             `SELECT password from "user" WHERE email='${userData.email}'`
@@ -135,6 +123,12 @@ router.post("/login", async (req: Request, res: Response) => {
         );
         userId = await bcrypt.hash(userId.rows[0].id.toString(), 0);
 
+        // check verification
+        var verified = await pool.query(
+            `SELECT verified from "user" WHERE email='${userData.email}'`
+        );
+        verified = verified.rows[0].verified;
+
         bcrypt.compare(userData.password, trueHashedPassword, (err: any, result: boolean) => {
             if (err) {
                 logging.error("Log in post", "Password doesn't match.");
@@ -143,7 +137,6 @@ router.post("/login", async (req: Request, res: Response) => {
                     error: "authenticationFailed",
                 });
             }
-
             if (result) {
                 const token = jwt.sign(
                     {
@@ -152,9 +145,19 @@ router.post("/login", async (req: Request, res: Response) => {
                     }, 
                     process.env.JWT_KEY,
                     {
-                        expiresIn: "10d"
+                        expiresIn: process.env.JWT_KEY_EXP
                     },
                 )
+
+                if (!verified) {
+                    logging.error("Log in post", "User not verified, sending new verification email.");
+            
+                    sendVerificationEmail(userData.email);
+        
+                    return res.status(401).json({
+                        error: "userNotVerified",
+                    });
+                }
                 
                 return res.status(200).json({
                     message: "successfulAuthentification",
@@ -299,7 +302,7 @@ router.get("/confirmation/:emailToken", async (req: Request, res: Response) => {
             `UPDATE "user" SET verified=true WHERE email='${decoded.email}'`
         );
 
-        return res.redirect("http://localhost:3000/login");
+        return res.redirect(`http://${config.server.app_domain}/login`);
     }
     catch (e: any) {
         return res.status(404).json({
