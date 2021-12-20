@@ -54,21 +54,63 @@ router.post("/signup", async (req: Request, res: Response) => {
             });
         }
 
+        // check if name is too short
+        if(userData.name.length < 3) {
+            logging.error("Sign up post", "Invalid name (too short).");
+    
+            return res.status(405).json({
+                error: "invalidSignupNameTooShort",
+            });
+        }
+
+        // check if name is too long
+        if(userData.name.length > 40) {
+            logging.error("Sign up post", "Invalid name (too long).");
+    
+            return res.status(405).json({
+                error: "invalidSignupNameTooLong",
+            });
+        }
+
+        // check if the name contains only latin characters
+        var latinOnly = true;
+        var matchStr = userData.name.match(/[a-zA-Z ]+/);
+        if (matchStr == null) {
+            latinOnly = false;
+        }
+        latinOnly = matchStr[0].length == userData.name.length;
+        if(!latinOnly) {
+            logging.error("Sign up post", "Invalid name (contains special characters or letters).");
+    
+            return res.status(405).json({
+                error: "invalidSignupNameNotLatin",
+            });
+        }
+
+        const roles = ["researcher", "student", "else"];
+        if (!roles.includes(userData.role)) {
+            logging.error("Sign up post", "Invalid role.");
+    
+            return res.status(405).json({
+                error: "invalidSignupRole",
+            });
+        }
+
         // check if email is valid
         if(!validateEmail(userData.email)) {
             logging.error("Sign up post", "Invalid email address.");
     
             return res.status(405).json({
-                error: "invalidEmailAddress",
+                error: "invalidSignupEmail",
             });
         }
 
         // check if the password is valid
-        if (userData.password.length < 10) {
-            logging.error("Sign up post", "Password too short.");
+        if (userData.password.length < 10 || userData.password.length > 63 || !/\d/.test(userData.password)) {
+            logging.error("Sign up post", "Invalid password.");
     
             return res.status(405).json({
-                error: "passwordTooShort",
+                error: "invalidSignupPassword",
             });
         }
 
@@ -80,7 +122,8 @@ router.post("/signup", async (req: Request, res: Response) => {
         var signupTime = `${currentdate.getDate()}/${currentdate.getMonth() + 1}/${currentdate.getFullYear()} ${currentdate.getHours()}:${currentdate.getMinutes()}`
 
         const newUser = await pool.query(
-            `INSERT INTO "user" (email, password, signup_time, verified) VALUES ('${userData.email}', '${passwordHash}', '${signupTime}', ${false})`
+            `INSERT INTO "user" (email, password, signup_time, verified, name, role) 
+                VALUES ('${userData.email}', '${passwordHash}', '${signupTime}', ${false}, '${userData.name}', '${userData.role}')`
         );
         res.json(newUser);
 
