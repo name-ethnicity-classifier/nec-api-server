@@ -114,6 +114,15 @@ router.post("/signup", async (req: Request, res: Response) => {
             });
         }
 
+        // check if consented to terms of service
+        if (!userData.consented) {
+            logging.error("Sign up post", "No consent for terms of service.");
+    
+            return res.status(405).json({
+                error: "noTermsOfServiceConsent",
+            });
+        }
+
         // hash password
         var passwordHash = await bcrypt.hash(userData.password, 10);
         
@@ -122,8 +131,8 @@ router.post("/signup", async (req: Request, res: Response) => {
         var signupTime = `${currentdate.getDate()}/${currentdate.getMonth() + 1}/${currentdate.getFullYear()} ${currentdate.getHours()}:${currentdate.getMinutes()}`
 
         const newUser = await pool.query(
-            `INSERT INTO "user" (email, password, signup_time, verified, name, role) 
-                VALUES ('${userData.email}', '${passwordHash}', '${signupTime}', ${false}, '${userData.name}', '${userData.role}')`
+            `INSERT INTO "user" (email, password, signup_time, verified, name, role, consented) 
+                VALUES ('${userData.email}', '${passwordHash}', '${signupTime}', ${false}, '${userData.name}', '${userData.role}', '${userData.consented}')`
         );
         res.json(newUser);
 
