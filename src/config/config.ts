@@ -19,7 +19,7 @@ const SERVER = {
 const POSTGRESQL_HOST = process.env.POSTGRESQL_HOST;
 const POSTGRESQL_DATABASE = process.env.POSTGRESQL_DATABASE;
 const POSTGRESQL_USER = process.env.POSTGRESQL_USER;
-const POSTGRESQL_PASSWORD = process.env.POSTGRESQL_PASSWORD; // #nec!#2345!#caktus!#420!#
+const POSTGRESQL_PASSWORD = process.env.POSTGRESQL_PASSWORD;
 const POSTGRESQL_PORT = process.env.POSTGRESQL_PORT;
 
 const POSTGRESQL = {
@@ -31,13 +31,6 @@ const POSTGRESQL = {
 };
 
 // mail config
-const EMAIL_HOST = process.env.EMAIL_HOST;
-const EMAIL_PORT = process.env.EMAIL_PORT;
-const EMAIL_USER = process.env.EMAIL_USER;
-const EMAIL_PASSWORD = process.env.EMAIL_PASSWORD;
-const JWT_EMAIL_KEY = process.env.JWT_EMAIL_KEY;
-const JWT_EMAIL_KEY_EXP = process.env.JWT_EMAIL_KEY_EXP;
-
 const MAIL = {
 	host: process.env.EMAIL_HOST,
 	port: process.env.EMAIL_PORT,

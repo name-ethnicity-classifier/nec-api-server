@@ -1,6 +1,7 @@
 import express from "express";
 import logging from "../config/logging";
 import { Request, Response } from "express";
+import { v4 as uuidv4 } from "uuid";
 
 var fs = require("fs");
 var path = require("path");
@@ -12,7 +13,8 @@ const router = express.Router();
 
 async function getUserIdFromEmail(email: string) {
     var userId = await pool.query(
-        `SELECT id from "user" WHERE email='${email}'`
+        `SELECT id from "user" WHERE email=$1`,
+        [email]
     );
     if (userId.rows.length === 0) {
         return -1;
@@ -24,11 +26,19 @@ async function getUserIdFromEmail(email: string) {
 
 
 // create model   
-router.post("/create-model", checkAuthentication, async (req: Request, res: Response) => {
+router.post("/create-model", checkAuthentication, async (req: any, res: Response) => {
     logging.info("Model post", "Model creation post-request called.");
 
     try {
         const modelData = req.body;
+
+        if (req.tokenEmail !== modelData.email) {
+            logging.error("Password change post", "Token doesn't match email.");
+
+            return res.status(401).json({
+                error: "authenticationFailed",
+            });
+        }
 
         var currentdate = new Date(); 
         var requestTime = `${currentdate.getDate()}/${currentdate.getMonth() + 1}/${currentdate.getFullYear()} ${currentdate.getHours()}:${currentdate.getMinutes()}`
@@ -45,7 +55,8 @@ router.post("/create-model", checkAuthentication, async (req: Request, res: Resp
 
         // detect model creation spam
         var allUserCreationTimes = await pool.query(
-            `SELECT creation_time FROM "model" WHERE model_id IN ( SELECT model_id FROM "user_to_model" WHERE user_id='${userId}' )`
+            `SELECT creation_time FROM "model" WHERE model_id IN ( SELECT model_id FROM "user_to_model" WHERE user_id=$1)`,
+            [userId]
         );
 
         var potentialSpamCreations = 0;            
@@ -86,8 +97,9 @@ router.post("/create-model", checkAuthentication, async (req: Request, res: Resp
         }
 
         // check if the model id already exists
-        const checkIdDuplicates = await pool.query(
-            `SELECT EXISTS(SELECT 1 FROM "model" WHERE model_id='${modelData.modelId}')`
+        /*const checkIdDuplicates = await pool.query(
+            `SELECT EXISTS(SELECT 1 FROM "model" WHERE model_id=$1)`,
+            [modelData.modelId]
         );
         if (checkIdDuplicates.rows[0].exists) {
             logging.error("Model post", "Model id already exists.");
@@ -95,11 +107,12 @@ router.post("/create-model", checkAuthentication, async (req: Request, res: Resp
             return res.status(409).json({
                 error: "modelIdDuplicateExists",
             });
-        }   
+        }*/  
 
         // check if user has already a model with the wanted name
         const modelNameDuplicates = await pool.query(
-            `SELECT user_id FROM "user_to_model" WHERE model_id IN ( SELECT model_id FROM "model" WHERE name='${modelData.name}' ) AND user_id='${userId}'`
+            `SELECT user_id FROM "user_to_model" WHERE model_id IN (SELECT model_id FROM "model" WHERE name=$1) AND user_id=$2`,
+            [modelData.name, userId]
         );
 
         if (modelNameDuplicates.rows.length > 0) {
@@ -110,19 +123,24 @@ router.post("/create-model", checkAuthentication, async (req: Request, res: Resp
             });
         }
 
+        const modelType = 0;
+        const modelMode = 0;
+        const modelId = uuidv4().split("-").slice(-1)[0];
+        const modelAccuracy = 0.0;
+        const modelScores = '{}';
+
         // create model entry
         const newModel = await pool.query(
-            `INSERT INTO "model" (model_id, name, accuracy, description, nationalities, scores, creation_time, mode, type) 
-            VALUES ('${modelData.modelId}', '${modelData.name}', '${modelData.accuracy}', '${modelData.description}', 
-                    '${modelData.nationalities}', '${modelData.scores}', '${requestTime}', '${modelData.mode}', '${modelData.type}')`
+            `INSERT INTO "model" (model_id, name, accuracy, description, nationalities, scores, creation_time, mode, type) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+            [modelId, modelData.name, modelAccuracy, modelData.description, modelData.nationalities, modelScores, requestTime, modelMode, modelType]
         );
         res.json(newModel);
 
         // create user-to-model entry
         const newUserModelRelation = await pool.query(
-            `INSERT INTO "user_to_model" (user_id, model_id) 
-            VALUES ('${userId}', '${modelData.modelId}')`
-            );
+            `INSERT INTO "user_to_model" (user_id, model_id) VALUES ($1, $2)`,
+            [userId, modelId]    
+        );
         res.json(newUserModelRelation);
     }
     catch (err) {
@@ -132,25 +150,25 @@ router.post("/create-model", checkAuthentication, async (req: Request, res: Resp
 
 
 // create model   
-router.post("/delete-model", checkAuthentication, async (req: Request, res: Response) => {
+router.post("/delete-model", checkAuthentication, async (req: any, res: Response) => {
     logging.info("Model post", "Model deletion post-request called.");
   
     try {
         const modelData = req.body;
 
-        // check if email exists
-        /*const userId = await getUserIdFromEmail(modelData.email);
-        if (userId === -1) {
-            logging.error("Model post", "User email does not exist.");
-    
-            return res.status(404).json({
-                error: "emailDoesNotExist",
+        // check if the token contains the same email as the request email for which to change the password
+        if (req.tokenEmail !== modelData.email) {
+            logging.error("Password change post", "Token doesn't match email.");
+
+            return res.status(401).json({
+                error: "authenticationFailed",
             });
-        }*/
+        }
 
         // check if the model id exists
         const checkId = await pool.query(
-            `SELECT EXISTS(SELECT 1 from "model" WHERE model_id='${modelData.modelId}')`
+            `SELECT EXISTS(SELECT 1 from "model" WHERE model_id=$1)`,
+            [modelData.modelId]
         );
         if (!checkId.rows[0].exists) {
             logging.error("Model post", "Model id does not exist.");
@@ -162,12 +180,15 @@ router.post("/delete-model", checkAuthentication, async (req: Request, res: Resp
 
         // delete model entry
         const deletedModel = await pool.query(
-            `DELETE FROM "model" WHERE model_id='${modelData.modelId}'`);
+            `DELETE FROM "model" WHERE model_id=$1`,
+            [modelData.modelId]
+        );
         res.json(deletedModel);
 
         // delete user-to-model entry
         const deletedUserModelRelation = await pool.query(
-            `DELETE FROM "user_to_model" WHERE model_id='${modelData.modelId}'`);
+            `DELETE FROM "user_to_model" WHERE model_id=$1`,
+            [modelData.modelId]);
         res.json(deletedUserModelRelation);
     }
     catch (err) {
@@ -177,11 +198,21 @@ router.post("/delete-model", checkAuthentication, async (req: Request, res: Resp
 
 
 // create model
-router.post("/classify-names", checkAuthentication, async (req: Request, res: Response) => {
+router.post("/classify-names", checkAuthentication, async (req: any, res: Response) => {
     logging.info("Classification post", "Classification post-request called.");
 
     const email = String(req.headers.email);
     const modelName = String(req.headers.model);
+
+    // check if the token contains the same email as the request email for which to change the password
+    if (req.tokenEmail !== email) {
+        logging.error("Password change post", "Token doesn't match email.");
+
+        return res.status(401).json({
+            error: "authenticationFailed",
+        });
+    }
+
 
     // check if email exists
     const userId = await getUserIdFromEmail(email);
@@ -195,7 +226,8 @@ router.post("/classify-names", checkAuthentication, async (req: Request, res: Re
 
     // check if the model id exists
     const modelIdObject = await pool.query(
-        `SELECT model_id from "model" WHERE name='${modelName}'`
+        `SELECT model_id from "model" WHERE name=$1`,
+        [modelName]
     );
     if (modelIdObject.rows.length === 0) {
         logging.error("Model post", "Model id does not exist.");
@@ -208,7 +240,7 @@ router.post("/classify-names", checkAuthentication, async (req: Request, res: Re
     const modelId = modelIdObject.rows[0].model_id;
     try {
         if(req.busboy) {
-            req.busboy.on("file", function(fieldName, file, fileName, encoding, mimeType, ) {                
+            req.busboy.on("file", function(fieldName: any, file: any, fileName: any, encoding: any, mimeType: any) {                
                 if (fileName.split(".").pop() !== "csv") {
                     logging.error("Classification post", "Uploaded file has a wrong file extension (must be '.csv').");
 
@@ -231,7 +263,7 @@ router.post("/classify-names", checkAuthentication, async (req: Request, res: Re
                     };
                     
                     // uncomment for debugging:
-                    // console.log(data.toString());
+                    console.log(data.toString());
 
                     const outputFileName = "nec-classification/tmp_data/" + fileName.split(".")[0] + "_out_" + modelId + ".csv";
                     res.sendFile(outputFileName, options, function (err) {
@@ -253,8 +285,6 @@ router.post("/classify-names", checkAuthentication, async (req: Request, res: Re
                 });
             });
             req.pipe(req.busboy);
-
-            
         }
         
         else {
@@ -266,7 +296,7 @@ router.post("/classify-names", checkAuthentication, async (req: Request, res: Re
         }
     }
     catch (err) {
-        console.log(err);
+        logging.error("Classification post", "Classification failed", err)
     }
 });
 

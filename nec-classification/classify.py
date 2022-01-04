@@ -162,7 +162,8 @@ if __name__ == "__main__":
 
     except Exception as e:
         print(traceback.format_exc())
-        sys.stdout.flush()
+        
+sys.stdout.flush()
 
     
 

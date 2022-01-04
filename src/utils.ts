@@ -11,7 +11,8 @@ const pool = require("./db");
 
 async function getUserIdFromEmail(email: string) {
     var userId = await pool.query(
-        `SELECT id from "user" WHERE email='${email}'`
+        `SELECT id from "user" WHERE email=$1`,
+        [email]
     );
     if (userId.rows.length === 0) {
         return -1;
@@ -23,9 +24,8 @@ async function getUserIdFromEmail(email: string) {
 
 async function getUserModelData(email: string) {
     var modelData = await pool.query(
-        `SELECT * FROM "model" WHERE 
-            model_id IN ( SELECT model_id FROM "user_to_model" WHERE user_id=( SELECT id FROM "user" WHERE email='${email}')) OR type=1
-        `
+        `SELECT * FROM "model" WHERE model_id IN ( SELECT model_id FROM "user_to_model" WHERE user_id=( SELECT id FROM "user" WHERE email=$1)) OR type=1`,
+        [email]
     );
 
     return modelData.rows;
@@ -47,7 +47,8 @@ async function addStandardModelData() {
         try {
             // check if the model id already exists
             const checkIdDuplicates = await pool.query(
-                `SELECT EXISTS(SELECT 1 FROM "model" WHERE model_id='${model}')`
+                `SELECT EXISTS(SELECT 1 FROM "model" WHERE model_id=$1)`,
+                [model]
             );
             if (!checkIdDuplicates.rows[0].exists) {
 
@@ -55,9 +56,9 @@ async function addStandardModelData() {
                 var creationTime = `${currentdate.getDate()}/${currentdate.getMonth() + 1}/${currentdate.getFullYear()} ${currentdate.getHours()}:${currentdate.getMinutes()}`
 
                 const newModel = await pool.query(
-                    `INSERT INTO "model" (model_id, name, accuracy, description, nationalities, scores, creation_time, mode, type) 
-                    VALUES ('${model}', '${data[model].name}', '${data[model].accuracy}', '${data[model].description}', 
-                            '${data[model].nationalities}', '${data[model].scores}', '${creationTime}', '${data[model].mode}', '${data[model].type}')`
+                    `INSERT INTO "model" (model_id, name, accuracy, description, nationalities, scores, creation_time, mode, type) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`, 
+                    [model, data[model].name, data[model].accuracy, data[model].description, data[model].nationalities, 
+                    data[model].scores, creationTime, data[model].mode, data[model].type]
                 );
             }
         }

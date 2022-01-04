@@ -19,23 +19,41 @@ const serverHealthCheck = (req: Request, res: Response, next: NextFunction) => {
 // get a dictionary of all available nationalities and their amount of samples
 const getNationalityData = (req: Request, res: Response, next: NextFunction) => {
 	logging.info("Nationality data route", "Available nationalities route called.");
-	var data = require("../../data/nationalityData.json");
+	const data = require("../../data/nationalityData.json");
 
 	// filter out nationalities with too little amount of samples
 	const MAX_NAMES_PER_NATIONALITY = 5000;
-	Object.keys(data).forEach((element: any) => {
-		if (data[element] < MAX_NAMES_PER_NATIONALITY) {
-			delete data[element];
+
+	var nationlityData = data["nationalities"];
+	Object.keys(nationlityData).forEach((element: any) => {
+		if (nationlityData[element] < MAX_NAMES_PER_NATIONALITY) {
+			delete nationlityData[element];
 		}
 	});
 
-	return res.status(200).json(data);
+	var nationalityGroupData = data["nationalityGroups"];
+	Object.keys(nationalityGroupData).forEach((element: any) => {
+		if (nationalityGroupData[element] < MAX_NAMES_PER_NATIONALITY) {
+			delete nationalityGroupData[element];
+		}
+	});
+
+	return res.status(200).json({ "nationalities": nationlityData, "nationalityGroups": nationalityGroupData});
 };
 
 
 // get all models the user has access to
 async function getUserModels(req: any, res: Response, next: NextFunction) {
 	logging.info("Model data route", "User models route called.");
+
+	if (req.tokenEmail !== req.headers.email) {
+        logging.error("Password change post", "Token doesn't match email.");
+
+        return res.status(401).json({
+            error: "authenticationFailed",
+        });
+    }
+
 	const data = await getUserModelData(req.headers.email);
 
 	return res.status(200).json(data);

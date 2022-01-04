@@ -1,1 +1,9 @@
 /node_modules
+.env
+/build
+**/__pycache__
+.env
+!/nec-classification/nec_user_models/.gitkeep
+/nec-classification/nec_user_models/*
+!/nec-classification/tmp_data/.gitkeep
+/nec-classification/tmp_data/*

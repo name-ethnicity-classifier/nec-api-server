@@ -1,4 +1,4 @@
-FROM node:latest
+FROM node:17
 WORKDIR "/app"
 
 COPY package.json .
@@ -10,7 +10,6 @@ RUN apt-get update
 RUN apt-get install python3
 RUN apt-get -y install python3-pip
 RUN pip3 install torch==1.9.1+cpu -f https://download.pytorch.org/whl/torch_stable.html
-RUN pip3 install pandas
 
 RUN npm run build
 CMD ["npm", "start"]
