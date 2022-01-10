@@ -235,6 +235,15 @@ router.post("/login", async (req: Request, res: Response) => {
 });
 
 
+const comparePasswords = (password: string, truePassword: string) => {
+    return new Promise(resolve => {
+        bcrypt.compare(password, truePassword, (err: any, result: any) => {
+            resolve(result);
+        });
+    })
+}
+
+
 // change password
 router.post("/change-password", checkAuthentication, async (req: any, res: any) => {
     logging.info("Password change post", "Password change post-request called.");
@@ -271,8 +280,34 @@ router.post("/change-password", checkAuthentication, async (req: any, res: any) 
             [userData.email]
         );
         trueHashedPassword = trueHashedPassword.rows[0].password;
+        
+        const authenticated = await comparePasswords(userData.password, trueHashedPassword);
+        if (authenticated) {
+            // change password
+            if (userData.newPassword.length < 10) {
+                logging.error("Sign up post", "Password too short.");
+        
+                return res.status(405).json({
+                    error: "passwordTooShort",
+                });
+            }
+            else {
+                var passwordHash = await bcrypt.hash(userData.newPassword, 10);
+                const newPassword = await pool.query(
+                    `UPDATE "user" SET password=$1 WHERE email=$2`,
+                    [passwordHash, userData.email]
+                );
+                res.json(newPassword);
+            }
+        }
+        else {
+            logging.error("Password change post", "Password doesn't match.");
 
-        bcrypt.compare(userData.password, trueHashedPassword, (err: any, result: any) => {
+            return res.status(401).json({
+                error: "authorizationFailed",
+            });
+        }
+        /*bcrypt.compare(userData.password, trueHashedPassword, (err: any, result: any) => {
             if (!result) {
                 logging.error("Password change post", "Password doesn't match.");
 
@@ -297,7 +332,7 @@ router.post("/change-password", checkAuthentication, async (req: any, res: any) 
                 [passwordHash, userData.email]
             );
             res.json(newPassword);
-        }
+        }*/
         
     }
     catch (err: any) {
@@ -305,6 +340,7 @@ router.post("/change-password", checkAuthentication, async (req: any, res: any) 
         console.log(err);
     }
 });
+
 
 
 // delete user
@@ -343,9 +379,34 @@ router.post("/delete-user", checkAuthentication, async (req: any, res: Response)
             [userData.email]
         );
         trueHashedPassword = trueHashedPassword.rows[0].password;
+
+        const authenticated = await comparePasswords(userData.password, trueHashedPassword);
+        if (authenticated) {
+            const deleteUser = await pool.query(
+                `DELETE FROM "user" WHERE email=$1`,
+                [userData.email]
+            );
+
+            const deleteModels = await pool.query(
+                `DELETE FROM "model" WHERE model_id IN (SELECT model_id FROM "user_to_model" WHERE user_id=$1)`,
+                [userId]
+            );
+
+            const deleteRelation = await pool.query(
+                `DELETE FROM "user_to_model" WHERE user_id=$1`,
+                [userId]
+            );
+            res.json(deleteUser);
+        }
+        else {
+            logging.error("User deletion post", "Password doesn't match.");
+
+            return res.status(401).json({
+                error: "authorizationFailed",
+            });
+        }
         
-        var passwordsMatch = false;
-        bcrypt.compare(userData.password, trueHashedPassword, (err: any, result: any) => {
+        /*bcrypt.compare(userData.password, trueHashedPassword, (err: any, result: any) => {
             if (!result) {
                 logging.error("User deletion post", "Password doesn't match.");
 
@@ -353,28 +414,26 @@ router.post("/delete-user", checkAuthentication, async (req: any, res: Response)
                     error: "authorizationFailed",
                 });
             }
-            else {
-                passwordsMatch = true;
-            }
-        });
+            // delete user, its models and the user-to-model realtion entry
+            const deleteUser = await pool.query(
+                `DELETE FROM "user" WHERE email=$1`,
+                [userData.email]
+            );
 
-        // delete user, its models and the user-to-model realtion entry
-        const deleteUser = await pool.query(
-            `DELETE FROM "user" WHERE email=$1`,
-            [userData.email]
-        );
+            const deleteModels = await pool.query(
+                `DELETE FROM "model" WHERE model_id IN (SELECT model_id FROM "user_to_model" WHERE user_id=$1)`,
+                [userId]
+            );
 
-        const deleteModels = await pool.query(
-            `DELETE FROM "model" WHERE model_id IN (SELECT model_id FROM "user_to_model" WHERE user_id=$1)`,
-            [userId]
-        );
+            const deleteRelation = await pool.query(
+                `DELETE FROM "user_to_model" WHERE user_id=$1`,
+                [userId]
+            );
+        });*/
 
-        const deleteRelation = await pool.query(
-            `DELETE FROM "user_to_model" WHERE user_id=$1`,
-            [userId]
-        );
+        
 
-        res.json(deleteUser);
+        //res.json(deleteUser);
         
     }
     catch (err: any) {
