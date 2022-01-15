@@ -1,172 +1,177 @@
 
-import torch
-import torch.utils.data
-import torch.nn as nn
-from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence
-import argparse
-import numpy as np
-import json
-import csv
-import string
-from typing import Union
-import os
-import time
-import traceback
-import sys
+def log(tag: str, message: str):
+    print(f"{27 * ' '}[{tag}] {message}", end="")
 
-from model import ConvLSTM as Model
-
-
-def load_json(file_path: str) -> dict:
-    with open(file_path, "r") as f:
-        return json.load(f)
-
-
-def load_input(file_path: str) -> list:
-    with open(file_path, "r") as f:
-        names = csv.reader(f)
-        return [e[0] for e in list(names)[1:]]
+try:
+    import torch
+    import torch.utils.data
+    import torch.nn as nn
+    from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence
+    import argparse
+    import numpy as np
+    import json
+    import csv
+    import string
+    from typing import Union
+    import os
+    import time
+    import traceback
+    import sys
+    from dotenv import load_dotenv
+    from model import ConvLSTM as Model
 
 
-def save_output(file_path: str, names: list, ethnicities: list) -> None:
-    with open(file_path, "w", newline="") as f:
-        csv_writer = csv.writer(f)
-        csv_writer.writerow(["names", "ethnicities"])
-        for i in range(len(ethnicities)):
-            csv_writer.writerow([names[i], ethnicities[i]])
+    def load_json(file_path: str) -> dict:
+        with open(file_path, "r") as f:
+            return json.load(f)
 
 
-def preprocess_names(names: list=[str], batch_size: int=128) -> torch.tensor:
-    """ create a pytorch-usable input-batch from a list of string-names
-    
-    :param list names: list of names (strings)
-    :param int batch_size: batch-size for the forward pass
-    :return torch.tensor: preprocessed names (to tensors, padded, encoded)
-    """
+    def load_input(file_path: str) -> list:
+        with open(file_path, "r") as f:
+            names = csv.reader(f)
+            return [e[0] for e in list(names)[1:]]
 
-    sample_batch = []
-    for name in names:
-        # create index-representation from string name, ie: "joe" -> [10, 15, 5], indices go from 1 ("a") to 28 ("-")
-        alphabet = list(string.ascii_lowercase.strip()) + [" ", "-"]
-        int_name = []
-        for char in name:
-            int_name.append(alphabet.index(char.lower()) + 1)
+
+    def save_output(file_path: str, names: list, ethnicities: list) -> None:
+        with open(file_path, "w", newline="") as f:
+            csv_writer = csv.writer(f)
+            csv_writer.writerow(["names", "ethnicities"])
+            for i in range(len(ethnicities)):
+                csv_writer.writerow([names[i], ethnicities[i]])
+
+
+    def preprocess_names(names: list=[str], batch_size: int=128) -> torch.tensor:
+        """ create a pytorch-usable input-batch from a list of string-names
         
-        name = torch.tensor(int_name)
-        sample_batch.append(name)
+        :param list names: list of names (strings)
+        :param int batch_size: batch-size for the forward pass
+        :return torch.tensor: preprocessed names (to tensors, padded, encoded)
+        """
 
-    padded_batch = pad_sequence(sample_batch, batch_first=True)
+        sample_batch = []
+        for name in names:
+            # create index-representation from string name, ie: "joe" -> [10, 15, 5], indices go from 1 ("a") to 28 ("-")
+            alphabet = list(string.ascii_lowercase.strip()) + [" ", "-"]
+            int_name = []
+            for char in name:
+                int_name.append(alphabet.index(char.lower()) + 1)
+            
+            name = torch.tensor(int_name)
+            sample_batch.append(name)
 
-    padded_to = list(padded_batch.size())[1]
-    padded_batch = padded_batch.reshape(len(sample_batch), padded_to, 1).to(device=device)
+        padded_batch = pad_sequence(sample_batch, batch_first=True)
 
-    if padded_batch.shape[0] == 1 or batch_size == padded_batch.shape[0]:
-        padded_batch = padded_batch.unsqueeze(0)
-    else:
-        padded_batch = torch.split(padded_batch, batch_size)
+        padded_to = list(padded_batch.size())[1]
+        padded_batch = padded_batch.reshape(len(sample_batch), padded_to, 1).to(device=device)
 
-    return padded_batch
-    
+        if padded_batch.shape[0] == 1 or batch_size == padded_batch.shape[0]:
+            padded_batch = padded_batch.unsqueeze(0)
+        else:
+            padded_batch = torch.split(padded_batch, batch_size)
 
-def predict(input_batch: torch.tensor, model_config: dict, device: torch.device) -> str:
-    """ load model and predict preprocessed name
-
-    :param torch.tensor input_batch: input-batch
-    :param str model_path: path to saved model-paramters
-    :param dict classes: a dictionary containing all countries with their class-number
-    :return str: predicted ethnicities
-    """
-
-    # prepare model (map model-file content from gpu to cpu if necessary)
-    model = Model(
-                class_amount=model_config["amount-classes"], 
-                embedding_size=model_config["embedding-size"],
-                hidden_size=model_config["hidden-size"],
-                layers=model_config["rnn-layers"],
-                kernel_size=model_config["cnn-parameters"][1],
-                channels=model_config["cnn-parameters"][2]
-            ).to(device=device)
+        return padded_batch
 
 
-    model_path = model_config["model-file"]
+    def predict(input_batch: torch.tensor, model_config: dict, device: torch.device) -> str:
+        """ load model and predict preprocessed name
 
-    if device != "cuda:0":
-        model.load_state_dict(torch.load(model_path, map_location={"cuda:0": "cpu"}))
-    else:
-        model.load_state_dict(torch.load(model_path))
+        :param torch.tensor input_batch: input-batch
+        :param str model_path: path to saved model-paramters
+        :param dict classes: a dictionary containing all countries with their class-number
+        :return str: predicted ethnicities
+        """
 
-    model = model.eval()
+        # prepare model (map model-file content from gpu to cpu if necessary)
+        model = Model(
+                    class_amount=model_config["amount-classes"], 
+                    embedding_size=model_config["embedding-size"],
+                    hidden_size=model_config["hidden-size"],
+                    layers=model_config["rnn-layers"],
+                    kernel_size=model_config["cnn-parameters"][1],
+                    channels=model_config["cnn-parameters"][2]
+                ).to(device=device)
 
-    # classify names    
-    total_predicted_ethncitities = []
 
-    for batch in input_batch:
-        predictions = model(batch.float())
+        model_path = model_config["model-file"]
 
-        # convert numerics to country name
-        predicted_ethnicites = []
-        for idx in range(len(predictions)):
-            prediction = predictions.cpu().detach().numpy()[idx]
-            prediction_idx = list(prediction).index(max(prediction))
-            ethnicity = list(classes.keys())[list(classes.values()).index(prediction_idx)]
-            predicted_ethnicites.append(ethnicity)
+        if device != "cuda:0":
+            model.load_state_dict(torch.load(model_path, map_location={"cuda:0": "cpu"}))
+        else:
+            model.load_state_dict(torch.load(model_path))
 
-        total_predicted_ethncitities += predicted_ethnicites
+        model = model.eval()
 
-    return total_predicted_ethncitities
-    
+        # classify names    
+        total_predicted_ethncitities = []
 
-if __name__ == "__main__":    
-    # read flag arguments
+        for batch in input_batch:
+            predictions = model(batch.float())
 
-    try:
-        parser = argparse.ArgumentParser()
-        parser.add_argument("-i", "--id", required=True)
-        parser.add_argument("-f", "--fileName", required=True)
-        args = vars(parser.parse_args())
+            # convert numerics to country name
+            predicted_ethnicites = []
+            for idx in range(len(predictions)):
+                prediction = predictions.cpu().detach().numpy()[idx]
+                prediction_idx = list(prediction).index(max(prediction))
+                ethnicity = list(classes.keys())[list(classes.values()).index(prediction_idx)]
+                predicted_ethnicites.append(ethnicity)
 
-        model_id = args["id"]
+            total_predicted_ethncitities += predicted_ethnicites
 
-        # get input and output path
-        csv_in_path = "nec-classification/tmp_data/" + args["fileName"].split(".")[0] + "_in_" + model_id + ".csv"
-        csv_out_path = "nec-classification/tmp_data/" + args["fileName"].split(".")[0] + "_out_" + model_id + ".csv" 
-
-        # get the train configurations
-        model_config = load_json("nec-classification/nec_user_models/" + model_id + "/config.json")
-        classes = load_json("nec-classification/nec_user_models/" + model_id + "/dataset/nationalities.json")
-        model_file = "nec-classification/nec_user_models/" + model_id + "/model.pt"
-        names = load_input(csv_in_path)
-        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        batch_size = 32
-
-        # preprocess inputs
-        input_batch = preprocess_names(names=names, batch_size=batch_size)
-
-        model_config = {
-            "model-file": model_file,
-            "amount-classes": len(classes),
-            "embedding-size": model_config["embedding-size"],
-            "hidden-size": model_config["hidden-size"],
-            "rnn-layers": model_config["rnn-layers"],
-            "cnn-parameters": model_config["cnn-parameters"]
-        }
-
-        # predict ethnicities
-        ethnicities = predict(input_batch, model_config, device)
-        save_output(csv_out_path, names, ethnicities)
-
-        # remove temporary csv file
-        os.remove(csv_in_path)
-
-        print("\n-> classified names using the model with id {}.".format(model_id))
-
-    except Exception as e:
-        print(traceback.format_exc())
+        return total_predicted_ethncitities
         
+
+    if __name__ == "__main__":
+        load_dotenv()
+
+        MAX_NAMES = int(os.getenv("MAX_NAMES"))
+        BATCH_SIZE = int(os.getenv("BATCH_SIZE"))
+
+        try:
+            parser = argparse.ArgumentParser()
+            parser.add_argument("-i", "--id", required=True)
+            parser.add_argument("-n", "--names", required=True)
+            args = vars(parser.parse_args())
+
+            model_id = args["id"]
+            
+            # get the train configurations
+            model_config = load_json(f"nec-classification/nec_user_models/{model_id}/config.json")
+            classes = load_json(f"nec-classification/nec_user_models/{model_id}/dataset/nationalities.json")
+            model_file = f"nec-classification/nec_user_models/{model_id}/model.pt"
+            names = args["names"].split(",")
+
+            if len(names) > MAX_NAMES:
+                print("classificationFailedTooManyNames")
+                sys.exit(-1)
+
+            device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+            # preprocess inputs
+            input_batch = preprocess_names(names=names, batch_size=BATCH_SIZE)
+
+            model_config = {
+                "model-file": model_file,
+                "amount-classes": len(classes),
+                "embedding-size": model_config["embedding-size"],
+                "hidden-size": model_config["hidden-size"],
+                "rnn-layers": model_config["rnn-layers"],
+                "cnn-parameters": model_config["cnn-parameters"]
+            }
+
+            # predict ethnicities
+            ethnicities = predict(input_batch, model_config, device)
+
+            # the 'print' statement containing the results that will get flushed to the js parent process
+            print(json.dumps(dict(zip(names, ethnicities))))
+
+            #log("SUCCESS", f"classified names using the model with id {model_id}.")
+
+        except Exception as e:
+            print(traceback.format_exc())
+
+except Exception as e:
+    log("ERROR", f"error:\n{e}")
+
 sys.stdout.flush()
 
     
-
-
-
-
