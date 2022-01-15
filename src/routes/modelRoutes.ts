@@ -31,8 +31,9 @@ router.post("/create-model", checkAuthentication, async (req: any, res: Response
 
     try {
         const modelData = req.body;
+        const email = req.headers.email;
 
-        if (req.tokenEmail !== modelData.email) {
+        if (req.tokenEmail !== email) {
             logging.error("Password change post", "Token doesn't match email.");
 
             return res.status(401).json({
@@ -44,7 +45,7 @@ router.post("/create-model", checkAuthentication, async (req: any, res: Response
         var requestTime = `${currentdate.getDate()}/${currentdate.getMonth() + 1}/${currentdate.getFullYear()} ${currentdate.getHours()}:${currentdate.getMinutes()}`
 
         // get user id from email
-        const userId = await getUserIdFromEmail(modelData.email);
+        const userId = await getUserIdFromEmail(email);
         if (userId === -1) {
             logging.error("Model post", "User email does not exists.");
     
@@ -131,8 +132,8 @@ router.post("/create-model", checkAuthentication, async (req: any, res: Response
 
         // create model entry
         const newModel = await pool.query(
-            `INSERT INTO "model" (model_id, name, accuracy, description, nationalities, scores, creation_time, mode, type) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-            [modelId, modelData.name, modelAccuracy, modelData.description, modelData.nationalities, modelScores, requestTime, modelMode, modelType]
+            `INSERT INTO "model" (model_id, name, accuracy, description, nationalities, scores, creation_time, mode, type, is_group_level) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+            [modelId, modelData.name, modelAccuracy, modelData.description, modelData.nationalities, modelScores, requestTime, modelMode, modelType, modelData.isGroupLevel]
         );
         res.json(newModel);
 
@@ -151,14 +152,14 @@ router.post("/create-model", checkAuthentication, async (req: any, res: Response
 
 // create model   
 router.post("/delete-model", checkAuthentication, async (req: any, res: Response) => {
-    logging.info("Model post", "Model deletion post-request called.");
+    logging.info("Model deletion post", "Model deletion post-request called.");
   
     try {
         const modelData = req.body;
 
         // check if the token contains the same email as the request email for which to change the password
-        if (req.tokenEmail !== modelData.email) {
-            logging.error("Password change post", "Token doesn't match email.");
+        if (req.tokenEmail !== req.headers.email) {
+            logging.error("Model deletion post", "Token doesn't match email.");
 
             return res.status(401).json({
                 error: "authenticationFailed",
@@ -171,7 +172,7 @@ router.post("/delete-model", checkAuthentication, async (req: any, res: Response
             [modelData.modelId]
         );
         if (!checkId.rows[0].exists) {
-            logging.error("Model post", "Model id does not exist.");
+            logging.error("Model deletion post", "Model id does not exist.");
     
             return res.status(409).json({
                 error: "modelIdDoesNotExist",
@@ -192,17 +193,17 @@ router.post("/delete-model", checkAuthentication, async (req: any, res: Response
         res.json(deletedUserModelRelation);
     }
     catch (err) {
-        console.log(err);
+        logging.error("Model deletion post", "Couldn't delete model.", err);
     }
 });
 
 
 // create model
-router.post("/classify-names", checkAuthentication, async (req: any, res: Response) => {
+/*router.post("/classify-names", checkAuthentication, async (req: any, res: Response) => {
     logging.info("Classification post", "Classification post-request called.");
 
-    const email = String(req.headers.email);
-    const modelName = String(req.headers.model);
+    const email = req.headers.email;
+    const modelName = req.headers.model;
 
     // check if the token contains the same email as the request email for which to change the password
     if (req.tokenEmail !== email) {
@@ -262,7 +263,6 @@ router.post("/classify-names", checkAuthentication, async (req: any, res: Respon
                         root: path.join(__dirname + "/../..")
                     };
                     
-                    // uncomment for debugging:
                     console.log(data.toString());
 
                     const outputFileName = "nec-classification/tmp_data/" + fileName.split(".")[0] + "_out_" + modelId + ".csv";
@@ -298,8 +298,69 @@ router.post("/classify-names", checkAuthentication, async (req: any, res: Respon
     catch (err) {
         logging.error("Classification post", "Classification failed", err)
     }
-});
+});*/
 
+
+router.post("/classify-names", checkAuthentication, async (req: any, res: Response) => {
+    logging.info("Classification post", "Classification post-request called.");
+
+    const email = req.headers.email;
+    const modelData = req.body;
+
+    // check if the token contains the same email as the request email for which to change the password
+    if (req.tokenEmail !== email) {
+        logging.error("Password change post", "Token doesn't match email.");
+
+        return res.status(401).json({
+            error: "authenticationFailed",
+        });
+    }
+
+    // check if email exists
+    const userId = await getUserIdFromEmail(email);
+    if (userId === -1) {
+        logging.error("Model post", "User email does not exist.");
+
+        return res.status(404).json({
+            error: "emailDoesNotExist",
+        });
+    }
+
+    // check if the model id exists
+    const modelIdObject = await pool.query(
+        `SELECT model_id from "model" WHERE name=$1`,
+        [modelData.modelName]
+    );
+    if (modelIdObject.rows.length === 0) {
+        logging.error("Model post", "Model id does not exist.");
+
+        return res.status(409).json({
+            error: "modelIdDoesNotExist",
+        });
+    }
+
+    const modelId = modelIdObject.rows[0].model_id;
+    try {
+        const classifyingProcess = spawn("python", ["nec-classification/classify.py", "--id", `${modelId}`, "--names", `${modelData.names.toString()}`]);
+
+        let classifyingResult = "";
+        classifyingProcess.stdout.on("data", function(data: any) {
+            classifyingResult += data.toString();
+        });
+
+        classifyingProcess.stdout.on("end", () => {
+            try {
+                // TODO maybe catch internal Python execption: classificationFailedTooManyNames
+                return res.status(200).json(JSON.parse(classifyingResult));
+            } catch (e) {
+                logging.error("Classification post", "Couldn't retrieve classification output.", e)
+            }
+        });
+    }
+    catch (err) {
+        logging.error("Classification post", "Classification failed", err)
+    }
+});
 
 
 
