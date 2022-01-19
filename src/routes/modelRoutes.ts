@@ -166,31 +166,51 @@ router.post("/delete-model", checkAuthentication, async (req: any, res: Response
             });
         }
 
-        // check if the model id exists
-        const checkId = await pool.query(
-            `SELECT EXISTS(SELECT 1 from "model" WHERE model_id=$1)`,
-            [modelData.modelId]
+        // check if the model name exists
+        const checkName = await pool.query(
+            `SELECT EXISTS(SELECT 1 from "model" WHERE name=$1)`,
+            [modelData.modelName]
         );
-        if (!checkId.rows[0].exists) {
-            logging.error("Model deletion post", "Model id does not exist.");
+        if (!checkName.rows[0].exists) {
+            logging.error("Model deletion post", "Model name does not exist.");
     
             return res.status(409).json({
-                error: "modelIdDoesNotExist",
+                error: "modelNameDoesNotExist",
             });
         }
 
-        // delete model entry
-        const deletedModel = await pool.query(
-            `DELETE FROM "model" WHERE model_id=$1`,
-            [modelData.modelId]
+        const checkType = await pool.query(
+            `SELECT type from "model" WHERE name=$1`,
+            [modelData.modelName]
         );
-        res.json(deletedModel);
 
+        if (checkType.rows[0].type === 1) {
+            logging.error("Model deletion post", "Can't delete standard models.");
+    
+            return res.status(400).json({
+                error: "cantDeleteStandardModel",
+            });
+        }
+
+        // get model id
+        const modelIdObject = await pool.query(
+            `SELECT model_id FROM "model" WHERE name=$1`,
+            [modelData.modelName]
+        );
+        
         // delete user-to-model entry
         const deletedUserModelRelation = await pool.query(
             `DELETE FROM "user_to_model" WHERE model_id=$1`,
-            [modelData.modelId]);
-        res.json(deletedUserModelRelation);
+            [modelIdObject.rows[0].model_id]
+        );
+
+        // delete model entry
+        const deletedModel = await pool.query(
+            `DELETE FROM "model" WHERE name=$1`,
+            [modelData.modelName]
+        );
+        res.json(deletedModel);
+        
     }
     catch (err) {
         logging.error("Model deletion post", "Couldn't delete model.", err);
@@ -343,22 +363,27 @@ router.post("/classify-names", checkAuthentication, async (req: any, res: Respon
     try {
         const classifyingProcess = spawn("python", ["nec-classification/classify.py", "--id", `${modelId}`, "--names", `${modelData.names.toString()}`]);
 
-        let classifyingResult = "";
+        let classificationResult = "";
         classifyingProcess.stdout.on("data", function(data: any) {
-            classifyingResult += data.toString();
+            classificationResult += data.toString();
         });
 
         classifyingProcess.stdout.on("end", () => {
             try {
-                // TODO maybe catch internal Python execption: classificationFailedTooManyNames
-                return res.status(200).json(JSON.parse(classifyingResult));
+                return res.status(200).json(JSON.parse(classificationResult));
             } catch (e) {
-                logging.error("Classification post", "Couldn't retrieve classification output.", e)
+                logging.error("Classification post", "Couldn't retrieve classification output.", e);
+                return res.status(400).json({
+                    error: "classificationFailed",
+                });
             }
         });
     }
     catch (err) {
-        logging.error("Classification post", "Classification failed", err)
+        logging.error("Classification post", "Classification failed", err);
+        return res.status(400).json({
+            error: "classificationFailed",
+        });
     }
 });
 

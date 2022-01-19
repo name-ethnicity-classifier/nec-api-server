@@ -113,7 +113,7 @@ try:
                 prediction = predictions.cpu().detach().numpy()[idx]
                 prediction_idx = list(prediction).index(max(prediction))
                 ethnicity = list(classes.keys())[list(classes.values()).index(prediction_idx)]
-                predicted_ethnicites.append([ethnicity, 100 * round(float(np.exp(max(prediction))), 3)])
+                predicted_ethnicites.append(ethnicity)
 
             total_predicted_ethncitities += predicted_ethnicites
 
@@ -129,19 +129,26 @@ try:
         try:
             parser = argparse.ArgumentParser()
             parser.add_argument("-i", "--id", required=True)
-            parser.add_argument("-n", "--names", required=True)
+            parser.add_argument("-f", "--fileName", required=True)
             args = vars(parser.parse_args())
 
             model_id = args["id"]
-            
+
+            # get input and output path
+            csv_in_path = f"nec-classification/tmp_data/{args['fileName'].split('.')[0]}_in_{model_id}.csv"
+            csv_out_path = f"nec-classification/tmp_data/{args['fileName'].split('.')[0]}_out_{model_id}.csv"
+
+            if not args["fileName"].endswith(".csv"):
+                log("ERROR", "file must be .csv.")
+
             # get the train configurations
             model_config = load_json(f"nec-classification/nec_user_models/{model_id}/config.json")
             classes = load_json(f"nec-classification/nec_user_models/{model_id}/dataset/nationalities.json")
             model_file = f"nec-classification/nec_user_models/{model_id}/model.pt"
-            names = args["names"].split(",")
+            names = load_input(csv_in_path)
 
             if len(names) > MAX_NAMES:
-                print("classificationFailedTooManyNames")
+                log("ERROR", f"too many names in file (amount: {len(names)}.")
                 sys.exit(-1)
 
             device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -160,11 +167,12 @@ try:
 
             # predict ethnicities
             ethnicities = predict(input_batch, model_config, device)
+            save_output(csv_out_path, names, ethnicities)
 
-            # the 'print' statement containing the results that will get flushed to the js parent process
-            print(json.dumps(dict(zip(names, ethnicities))))
+            # remove temporary csv file
+            os.remove(csv_in_path)
 
-            #log("SUCCESS", f"classified names using the model with id {model_id}.")
+            log("SUCCESS", f"classified names using the model with id {model_id}.")
 
         except Exception as e:
             print(traceback.format_exc())

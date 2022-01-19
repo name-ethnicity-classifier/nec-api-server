@@ -79,7 +79,7 @@ async function getStandardModels(req: any, res: Response, next: NextFunction) {
 const router = express.Router();
 router.get("/ping", serverHealthCheck);
 router.get("/nationalities", getNationalityData);
-router.get("/my-models", checkAuthentication, getUserModels);
+router.get("/models", checkAuthentication, getUserModels);
 router.get("/standard-models", getStandardModels);
 
 export = router;

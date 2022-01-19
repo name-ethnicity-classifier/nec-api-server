@@ -28,7 +28,14 @@ async function getUserModelData(email: string) {
         [email]
     );
 
-    return modelData.rows;
+    modelData = modelData.rows;
+    for (let i=0; i<modelData.length; i++) {
+        delete modelData[i]["model_id"];
+        delete modelData[i]["description"];
+        delete modelData[i]["is_group_level"];
+    }
+    
+    return modelData;
 }
 
 async function getStandardModelData() {
