@@ -218,7 +218,79 @@ router.post("/delete-model", checkAuthentication, async (req: any, res: Response
 });
 
 
-// create model
+router.post("/classify-names", checkAuthentication, async (req: any, res: Response) => {
+    logging.info("Classification post", "Classification post-request called.");
+
+    const email = req.headers.email;
+    const modelData = req.body;
+
+    // check if the token contains the same email as the request email for which to change the password
+    if (req.tokenEmail !== email) {
+        logging.error("Password change post", "Token doesn't match email.");
+
+        return res.status(401).json({
+            error: "authenticationFailed",
+        });
+    }
+
+    // check if email exists
+    const userId = await getUserIdFromEmail(email);
+    if (userId === -1) {
+        logging.error("Model post", "User email does not exist.");
+
+        return res.status(404).json({
+            error: "emailDoesNotExist",
+        });
+    }
+
+    // check if the model id exists
+    const modelIdObject = await pool.query(
+        `SELECT model_id from "model" WHERE name=$1`,
+        [modelData.modelName]
+    );
+    if (modelIdObject.rows.length === 0) {
+        logging.error("Model post", "Model id does not exist.");
+
+        return res.status(409).json({
+            error: "modelNameDoesNotExist",
+        });
+    }
+
+    const modelId = modelIdObject.rows[0].model_id;
+    try {
+        const classifyingProcess = spawn("python", ["nec-classification/classify.py", "--id", `${modelId}`, "--names", `${modelData.names.toString()}`]);
+
+        let classificationResult = "";
+        classifyingProcess.stdout.on("data", function(data: any) {
+            classificationResult += data.toString();
+        });
+
+        classifyingProcess.stdout.on("end", () => {
+            try {
+                return res.status(200).json(JSON.parse(classificationResult));
+            } catch (e) {
+                logging.error("Classification post", "Couldn't retrieve classification output.", e);
+                return res.status(400).json({
+                    error: "classificationFailed",
+                });
+            }
+        });
+    }
+    catch (err) {
+        logging.error("Classification post", "Classification failed", err);
+        return res.status(400).json({
+            error: "classificationFailed",
+        });
+    }
+});
+
+
+
+module.exports = router;
+
+
+
+// OLD create model
 /*router.post("/classify-names", checkAuthentication, async (req: any, res: Response) => {
     logging.info("Classification post", "Classification post-request called.");
 
@@ -319,74 +391,3 @@ router.post("/delete-model", checkAuthentication, async (req: any, res: Response
         logging.error("Classification post", "Classification failed", err)
     }
 });*/
-
-
-router.post("/classify-names", checkAuthentication, async (req: any, res: Response) => {
-    logging.info("Classification post", "Classification post-request called.");
-
-    const email = req.headers.email;
-    const modelData = req.body;
-
-    // check if the token contains the same email as the request email for which to change the password
-    if (req.tokenEmail !== email) {
-        logging.error("Password change post", "Token doesn't match email.");
-
-        return res.status(401).json({
-            error: "authenticationFailed",
-        });
-    }
-
-    // check if email exists
-    const userId = await getUserIdFromEmail(email);
-    if (userId === -1) {
-        logging.error("Model post", "User email does not exist.");
-
-        return res.status(404).json({
-            error: "emailDoesNotExist",
-        });
-    }
-
-    // check if the model id exists
-    const modelIdObject = await pool.query(
-        `SELECT model_id from "model" WHERE name=$1`,
-        [modelData.modelName]
-    );
-    if (modelIdObject.rows.length === 0) {
-        logging.error("Model post", "Model id does not exist.");
-
-        return res.status(409).json({
-            error: "modelIdDoesNotExist",
-        });
-    }
-
-    const modelId = modelIdObject.rows[0].model_id;
-    try {
-        const classifyingProcess = spawn("python", ["nec-classification/classify.py", "--id", `${modelId}`, "--names", `${modelData.names.toString()}`]);
-
-        let classificationResult = "";
-        classifyingProcess.stdout.on("data", function(data: any) {
-            classificationResult += data.toString();
-        });
-
-        classifyingProcess.stdout.on("end", () => {
-            try {
-                return res.status(200).json(JSON.parse(classificationResult));
-            } catch (e) {
-                logging.error("Classification post", "Couldn't retrieve classification output.", e);
-                return res.status(400).json({
-                    error: "classificationFailed",
-                });
-            }
-        });
-    }
-    catch (err) {
-        logging.error("Classification post", "Classification failed", err);
-        return res.status(400).json({
-            error: "classificationFailed",
-        });
-    }
-});
-
-
-
-module.exports = router;

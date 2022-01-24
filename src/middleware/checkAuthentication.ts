@@ -1,5 +1,4 @@
 import logging from "../config/logging";
-import config from "../config/config";
 import { Response, NextFunction } from "express";
 
 
@@ -17,7 +16,7 @@ module.exports = (req: any, res: Response, next: NextFunction) => {
         logging.error("User authorization", "Token not provided (invalid or expired).", err);
 
         return res.status(401).json({
-            error: "authorizationProhibited"
+            error: "authorizationFailed"
         });
     }
 }

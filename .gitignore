@@ -3,7 +3,8 @@
 /build
 **/__pycache__
 .env
-!/nec-classification/nec_user_models/.gitkeep
 /nec-classification/nec_user_models/*
+!/nec-classification/nec_user_models/.gitkeep
 !/nec-classification/tmp_data/.gitkeep
 /nec-classification/tmp_data/*
+/nec-classification/classify_old.py

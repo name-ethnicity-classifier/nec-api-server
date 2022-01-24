@@ -113,7 +113,7 @@ try:
                 prediction = predictions.cpu().detach().numpy()[idx]
                 prediction_idx = list(prediction).index(max(prediction))
                 ethnicity = list(classes.keys())[list(classes.values()).index(prediction_idx)]
-                predicted_ethnicites.append([ethnicity, 100 * round(float(np.exp(max(prediction))), 3)])
+                predicted_ethnicites.append([ethnicity, round(100 * float(np.exp(max(prediction))), 3)])
 
             total_predicted_ethncitities += predicted_ethnicites
 
