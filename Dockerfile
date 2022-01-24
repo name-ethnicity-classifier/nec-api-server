@@ -14,4 +14,4 @@ RUN pip3 install python-dotenv
 RUN pip3 install numpy
 
 RUN npm run build
-CMD ["npm", "start"]
+CMD ["npm", "run", "serve"]
