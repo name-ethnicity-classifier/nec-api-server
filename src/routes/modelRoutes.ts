@@ -258,7 +258,7 @@ router.post("/classify-names", checkAuthentication, async (req: any, res: Respon
 
     const modelId = modelIdObject.rows[0].model_id;
     try {
-        const classifyingProcess = spawn("python", ["nec-classification/classify.py", "--id", `${modelId}`, "--names", `${modelData.names.toString()}`]);
+        const classifyingProcess = spawn("python3", ["nec-classification/classify.py", "--id", `${modelId}`, "--names", `${modelData.names.toString()}`]);
 
         let classificationResult = "";
         classifyingProcess.stdout.on("data", function(data: any) {
