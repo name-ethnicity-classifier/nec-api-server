@@ -76,7 +76,6 @@ async function getStandardModels(req: any, res: Response, next: NextFunction) {
 };
 
 
-
 const router = express.Router();
 router.get("/ping", serverHealthCheck);
 router.get("/nationalities", getNationalityData);
