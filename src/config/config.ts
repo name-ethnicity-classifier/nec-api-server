@@ -2,6 +2,7 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
+
 // server config
 const HOST_NAME = process.env.HOST_NAME;
 const SERVER_PORT = process.env.SERVER_PORT;
@@ -46,6 +47,7 @@ const MAIL = {
 
 // total config
 const config = {
+	dev: process.env.DEV || "false",
 	server: SERVER,
 	db: POSTGRESQL,
 	mail: MAIL

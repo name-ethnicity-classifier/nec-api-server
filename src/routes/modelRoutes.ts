@@ -1,5 +1,6 @@
 import express from "express";
 import logging from "../config/logging";
+import config from "../config/config";
 import { Request, Response } from "express";
 import { v4 as uuidv4 } from "uuid";
 
@@ -256,9 +257,17 @@ router.post("/classify-names", checkAuthentication, async (req: any, res: Respon
         });
     }
 
+    let pythonCommand;
+    if (config.dev === "true") {
+        pythonCommand = "python";
+    }
+    else {
+        pythonCommand = "python3";
+    }
+
     const modelId = modelIdObject.rows[0].model_id;
     try {
-        const classifyingProcess = spawn("python3", ["nec-classification/classify.py", "--id", `${modelId}`, "--names", `${modelData.names.toString()}`]);
+        const classifyingProcess = spawn(pythonCommand, ["nec-classification/classify.py", "--id", `${modelId}`, "--names", `${modelData.names.toString()}`]);
 
         let classificationResult = "";
         classifyingProcess.stdout.on("data", function(data: any) {

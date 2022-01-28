@@ -5,9 +5,10 @@ import config from "./config/config";
 import utilRoutes from "./routes/utilRoutes";
 import { Request, Response, NextFunction } from "express";
 
-
 const cors = require("cors");
 const busboy = require("connect-busboy");
+var Ddos = require("ddos");
+var ddos = new Ddos({ burst: 10, limit: 15 });
 
 const app = express();
 
@@ -15,6 +16,8 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded());
 app.use(busboy());
+app.use(ddos.express);
+
 
 const userRoutes = require("./routes/userRoutes");
 const modelRoutes = require("./routes/modelRoutes");
