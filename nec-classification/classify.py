@@ -19,6 +19,8 @@ try:
     import sys
     from dotenv import load_dotenv
     from model import ConvLSTM as Model
+    import unicodedata
+    import re
 
 
     def load_json(file_path: str) -> dict:
@@ -39,6 +41,19 @@ try:
             for i in range(len(ethnicities)):
                 csv_writer.writerow([names[i], ethnicities[i]])
 
+    def replace_special_chars(name: str) -> str:
+        """ replaces all apostrophe letters with their base letters and removes all other special characters incl. numbers
+        
+        :param str name: name
+        :return str: normalized name
+        """
+
+        name = u"{}".format(name)
+        name = unicodedata.normalize("NFD", name).encode("ascii", "ignore").decode("utf-8")
+        name = re.sub("[^A-Za-z -]+", "", name)
+
+        return name
+
 
     def preprocess_names(names: list=[str], batch_size: int=128) -> torch.tensor:
         """ create a pytorch-usable input-batch from a list of string-names
@@ -50,6 +65,9 @@ try:
 
         sample_batch = []
         for name in names:
+            # remove special characters
+            name = replace_special_chars(name)
+            
             # create index-representation from string name, ie: "joe" -> [10, 15, 5], indices go from 1 ("a") to 28 ("-")
             alphabet = list(string.ascii_lowercase.strip()) + [" ", "-"]
             int_name = []
