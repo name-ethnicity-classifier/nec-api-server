@@ -7,6 +7,7 @@ import dotenv from "dotenv";
 dotenv.config();
 const jwt = require("jsonwebtoken");
 const pool = require("./db");
+var mg = require('nodemailer-mailgun-transport');
 
 
 async function getUserIdFromEmail(email: string) {
@@ -77,6 +78,7 @@ async function addStandardModelData() {
 
 
 async function sendVerificationEmail(userEmail: string) {
+    console.log("\n" + config.mail.jwt_key + "\n");
     const emailToken = jwt.sign(
         {
             email: userEmail,
@@ -86,14 +88,13 @@ async function sendVerificationEmail(userEmail: string) {
             expiresIn: `${config.mail.jwt_key_exp}`
         },
     );
-
-    const oAuth2Client = new google.auth.OAuth2(config.mail.client_id, config.mail.client_secret, config.mail.redirect_uri);
-    oAuth2Client.setCredentials({ refresh_token: config.mail.refresh_token });
+    /*const oAuth2Client = new google.auth.OAuth2(config.mail.client_id, config.mail.client_secret, config.mail.redirect_uri);
+    oAuth2Client.setCredentials({ refresh_token: config.mail.refresh_token });*/
 
     try {
-        const accessToken = await oAuth2Client.getAccessToken();
+        //const accessToken = await oAuth2Client.getAccessToken();
 
-        const transporter = nodemailer.createTransport({
+        /*const transporter = nodemailer.createTransport({
             service: "gmail",
             auth: {
                 type: "OAuth2",
@@ -103,8 +104,19 @@ async function sendVerificationEmail(userEmail: string) {
                 refreshToken: config.mail.refresh_token,
                 accessToken: accessToken.toLocaleString()
             }
+        });*/
+
+        //var transporter = nodemailer.createTransport(mg(auth));
+        var transporter = nodemailer.createTransport({
+            host: "smtp.sendgrid.net",
+            port: 465,
+            secure: true,
+            auth: {
+                user: "apikey",
+                pass: config.mail.sendgrid_api_key
+            },
         });
-        
+
         const confirmationUrl = `http://${config.server.api_domain}/confirmation/${emailToken}`;
 
         const emailMessage = {
@@ -113,7 +125,7 @@ async function sendVerificationEmail(userEmail: string) {
             subject: "name-to-ethnicity account confirmation.",
             html: `<b>Hey there!</b><br/><br/>Did you just create an account for the "name-to-ethnicity" webapp? If so, please confirm it by clicking on the link below:<br/><br/><a style="color:#3F7CF7" href="${confirmationUrl}"><b>Confirm account.</b></a><br/><br/>Please do not reply to this email. Thanks!`
         }
-        
+
         transporter.sendMail(emailMessage, (err: any, info: any) => {
             if (err) {
                 logging.error("Sign up post", "Couldn't send verification email.", err);
