@@ -41,6 +41,7 @@ try:
             for i in range(len(ethnicities)):
                 csv_writer.writerow([names[i], ethnicities[i]])
 
+
     def replace_special_chars(name: str) -> str:
         """ replaces all apostrophe letters with their base letters and removes all other special characters incl. numbers
         
