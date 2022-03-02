@@ -37,6 +37,7 @@ const MAIL = {
 	port: process.env.EMAIL_PORT,
 	user: process.env.EMAIL_USER,
 	password: process.env.EMAIL_PASSWORD,
+	sendgrid_api_key: process.env.SENDGRID_API_KEY,
 	client_id: process.env.GMAIL_CLIENT_ID,
 	client_secret: process.env.GMAIL_CLIENT_SECRET,
 	redirect_uri: process.env.GMAIL_REDIRECT_URI,
