@@ -227,7 +227,7 @@ router.post("/classify-names", checkAuthentication, async (req: any, res: Respon
 
     // check if the token contains the same email as the request email for which to change the password
     if (req.tokenEmail !== email) {
-        logging.error("Password change post", "Token doesn't match email.");
+        logging.error("Classification post", "Token doesn't match email.");
 
         return res.status(401).json({
             error: "authenticationFailed",
@@ -237,7 +237,7 @@ router.post("/classify-names", checkAuthentication, async (req: any, res: Respon
     // check if email exists
     const userId = await getUserIdFromEmail(email);
     if (userId === -1) {
-        logging.error("Model post", "User email does not exist.");
+        logging.error("Classification post", "User email does not exist.");
 
         return res.status(404).json({
             error: "emailDoesNotExist",
@@ -250,7 +250,7 @@ router.post("/classify-names", checkAuthentication, async (req: any, res: Respon
         [modelData.modelName]
     );
     if (modelIdObject.rows.length === 0) {
-        logging.error("Model post", "Model id does not exist.");
+        logging.error("Classification post", "Model id does not exist.");
 
         return res.status(409).json({
             error: "modelNameDoesNotExist",
