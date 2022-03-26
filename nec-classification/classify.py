@@ -41,7 +41,7 @@ try:
             for i in range(len(ethnicities)):
                 csv_writer.writerow([names[i], ethnicities[i]])
 
-
+        
     def replace_special_chars(name: str) -> str:
         """ replaces all apostrophe letters with their base letters and removes all other special characters incl. numbers
         
@@ -66,9 +66,9 @@ try:
 
         sample_batch = []
         for name in names:
-            # remove special characters
+            # normalize name to only latin characters
             name = replace_special_chars(name)
-            
+
             # create index-representation from string name, ie: "joe" -> [10, 15, 5], indices go from 1 ("a") to 28 ("-")
             alphabet = list(string.ascii_lowercase.strip()) + [" ", "-"]
             int_name = []
