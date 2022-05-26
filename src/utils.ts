@@ -7,7 +7,6 @@ import dotenv from "dotenv";
 dotenv.config();
 const jwt = require("jsonwebtoken");
 const pool = require("./db");
-var mg = require('nodemailer-mailgun-transport');
 
 
 async function getUserIdFromEmail(email: string) {

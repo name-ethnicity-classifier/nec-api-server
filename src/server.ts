@@ -7,6 +7,8 @@ import { Request, Response, NextFunction } from "express";
 
 const cors = require("cors");
 const busboy = require("connect-busboy");
+var bodyParser = require("body-parser");
+
 var Ddos = require("ddos");
 var ddos = new Ddos({ burst: 10, limit: 15 });
 
@@ -17,7 +19,8 @@ app.use(express.json());
 app.use(express.urlencoded());
 app.use(busboy());
 app.use(ddos.express);
-
+app.use(bodyParser.urlencoded({ limit: "25mb", extended: false }));
+app.use(bodyParser.json({ limit: "25mb" }));
 
 const userRoutes = require("./routes/userRoutes");
 const modelRoutes = require("./routes/modelRoutes");
